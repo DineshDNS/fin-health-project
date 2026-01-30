@@ -12,6 +12,8 @@ from integrations.banking.parser import normalize_bank_data
 from ml.features import compute_features
 from ml.scoring import calculate_health_score, classify_risk
 
+from ml.forecasting import cashflow_forecast
+
 
 @api_view(["POST"])
 def import_gst_data(request):
@@ -63,7 +65,7 @@ from .models import FinancialHealthScore
 
 @api_view(["POST"])
 def health_insights(request):
-    
+
     language = request.data.get("language", "en")
     if language not in ["en", "hi", "ta"]:
         language = "en"
@@ -87,4 +89,21 @@ def health_insights(request):
     return Response({
         "language": language,
         "insight": insight
+    })
+
+
+@api_view(["GET"])
+def cashflow_prediction(request):
+    bank_records = BankStatement.objects.order_by("created_at")
+
+    if bank_records.count() < 2:
+        return Response({
+            "error": "Not enough historical data for forecasting"
+        }, status=400)
+
+    forecast = cashflow_forecast(bank_records)
+
+    return Response({
+        "forecast_horizon": "3 months",
+        "forecast": forecast
     })
