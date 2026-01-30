@@ -97,13 +97,17 @@ def cashflow_prediction(request):
     bank_records = BankStatement.objects.order_by("created_at")
 
     if bank_records.count() < 2:
-        return Response({
-            "error": "Not enough historical data for forecasting"
-        }, status=400)
+        return Response(
+            {"error": "Not enough historical data for forecasting"},
+            status=400
+        )
 
     forecast = cashflow_forecast(bank_records)
 
-    return Response({
-        "forecast_horizon": "3 months",
-        "forecast": forecast
-    })
+    return Response(
+        {
+            "forecast_horizon": "3 months",
+            "forecast": forecast
+        },
+        status=200
+    )
