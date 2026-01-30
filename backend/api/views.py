@@ -57,3 +57,34 @@ def calculate_health(request):
         "features": features
     })
 
+from ai.gpt_service import generate_financial_insights
+from .models import FinancialHealthScore
+
+
+@api_view(["POST"])
+def health_insights(request):
+    
+    language = request.data.get("language", "en")
+    if language not in ["en", "hi", "ta"]:
+        language = "en"
+
+    latest = FinancialHealthScore.objects.latest("created_at")
+
+    payload = {
+        "score": latest.score,
+        "risk_level": latest.risk_level,
+        "features": {
+            "profit_margin": latest.gst_record.total_sales,
+            "cash_flow_ratio": latest.bank_record.total_inflow,
+            "emi_ratio": latest.bank_record.loan_emi,
+            "tax_compliance": 1,
+            "liquidity_ratio": latest.bank_record.average_balance
+        }
+    }
+
+    insight = generate_financial_insights(payload, language)
+
+    return Response({
+        "language": language,
+        "insight": insight
+    })
