@@ -3,13 +3,20 @@ from openai import OpenAI
 from openai import RateLimitError
 from .prompts import financial_insight_prompt
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def get_openai_client():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    return OpenAI(api_key=api_key)
 
 
 def generate_financial_insights(data, language="en"):
     prompt = financial_insight_prompt(data, language)
 
     try:
+        client = get_openai_client()  # ✅ lazy initialization
+
         response = client.responses.create(
             model="gpt-5",
             input=prompt,
