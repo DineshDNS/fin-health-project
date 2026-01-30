@@ -30,3 +30,12 @@ class BankStatement(models.Model):
     average_balance = models.FloatField()
     loan_emi = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class FinancialHealthScore(models.Model):
+    gst_record = models.ForeignKey(GSTRecord, on_delete=models.CASCADE)
+    bank_record = models.ForeignKey(BankStatement, on_delete=models.CASCADE)
+    score = models.FloatField()
+    risk_level = models.CharField(max_length=10)
+    created_at = models.DateTimeField(auto_now_add=True)
+
