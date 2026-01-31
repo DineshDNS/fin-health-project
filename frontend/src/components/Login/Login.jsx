@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { loginUser } from "../../api/authApi";
+import { FaUser, FaLock } from "react-icons/fa";
 
 function Login() {
   const navigate = useNavigate();
@@ -33,14 +34,15 @@ function Login() {
         password: form.password,
       });
 
+      // Store JWT tokens
       localStorage.setItem("accessToken", response.data.access);
       localStorage.setItem("refreshToken", response.data.refresh);
 
-      navigate("/upload");
+      // Redirect ONLY after successful login
+      navigate("/", { replace: true });
     } catch (error) {
       setMessage(
-        error.response?.data?.detail ||
-        "Invalid username or password"
+        error.response?.data?.detail || "Invalid username or password"
       );
     } finally {
       setLoading(false);
@@ -56,11 +58,12 @@ function Login() {
         <div className={styles.field}>
           <label>Username</label>
           <div className={styles.inputRow}>
-            <i className="far fa-user"></i>
+            <FaUser className={styles.icon} />
             <input
               type="text"
               name="username"
               placeholder="Type your username"
+              value={form.username}
               onChange={handleChange}
             />
           </div>
@@ -70,11 +73,12 @@ function Login() {
         <div className={styles.field}>
           <label>Password</label>
           <div className={styles.inputRow}>
-            <i className="fas fa-lock"></i>
+            <FaLock className={styles.icon} />
             <input
               type="password"
               name="password"
               placeholder="Type your password"
+              value={form.password}
               onChange={handleChange}
             />
           </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import styles from "./Signup.module.css";
 import { Link, useNavigate } from "react-router-dom";
 import { signupUser } from "../../api/authApi";
+import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
 
 function Signup() {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ function Signup() {
         <div className={styles.field}>
           <label>Username</label>
           <div className={styles.inputRow}>
-            <i className="far fa-user"></i>
+            <FaUser className={styles.icon} />
             <input
               type="text"
               name="username"
@@ -80,7 +81,7 @@ function Signup() {
         <div className={styles.field}>
           <label>Email</label>
           <div className={styles.inputRow}>
-            <i className="far fa-envelope"></i>
+            <FaEnvelope className={styles.icon} />
             <input
               type="email"
               name="email"
@@ -94,7 +95,7 @@ function Signup() {
         <div className={styles.field}>
           <label>Password</label>
           <div className={styles.inputRow}>
-            <i className="fas fa-lock"></i>
+            <FaLock className={styles.icon} />
             <input
               type="password"
               name="password"
@@ -108,7 +109,7 @@ function Signup() {
         <div className={styles.field}>
           <label>Confirm Password</label>
           <div className={styles.inputRow}>
-            <i className="fas fa-lock"></i>
+            <FaLock className={styles.icon} />
             <input
               type="password"
               name="confirmPassword"

@@ -9,20 +9,22 @@
 
 .card {
   width: 330px;
-  height:80%;
+  height:90%;
   background: #fff;
-  padding: 40px 30px;
+  padding: 20px 30px;
   border-radius: 14px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
 .card h2 {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 25px;
+  font-weight: 600;
+  font-size: larger;
 }
 
 .field {
-  margin-bottom: 24px;
+  margin-bottom: 25px;
 }
 
 .field label {
@@ -35,7 +37,7 @@
   display: flex;
   align-items: center;
   border-bottom: 1px solid #cfcfcf;
-  padding: 6px 0;
+  padding: 3px 0;
 }
 
 .inputRow i {
@@ -82,4 +84,11 @@
   font-size: 13px;
   color: #e63946;
   text-align: center;
+}
+
+.icon {
+  font-size: 15px;
+  color: #9a9a9a;
+  margin-right: 12px;
+  min-width: 18px;
 }

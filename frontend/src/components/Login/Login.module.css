@@ -20,6 +20,7 @@
   text-align: center;
   margin-bottom: 32px;
   font-weight: 600;
+  font-size: larger;
 }
 
 .field {
@@ -96,4 +97,11 @@
 
 .forgot a:hover {
   text-decoration: underline;
+}
+
+.icon {
+  font-size: 15px;
+  color: #9a9a9a;
+  margin-right: 12px;
+  min-width: 18px;
 }
