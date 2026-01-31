@@ -2,13 +2,12 @@ import axios from "axios";
 
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
-export function uploadFinancialDocument(formData) {
+export function getDocuments() {
   const token = localStorage.getItem("accessToken");
 
-  return axios.post(`${API_BASE_URL}/upload/`, formData, {
+  return axios.get(`${API_BASE_URL}/documents/`, {
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "multipart/form-data",
     },
   });
 }

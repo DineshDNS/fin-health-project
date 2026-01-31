@@ -229,3 +229,90 @@ class FinancialUploadView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from django.db.models import Sum
+
+from .models import (
+    FinancialHealthScore,
+    BankStatement,
+    GSTRecord,
+    FinancialDocument,
+)
+
+class OverviewAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # ---- Health Score & Risk ----
+        health = (
+            FinancialHealthScore.objects
+            .filter(user=user)
+            .order_by("-created_at")
+            .first()
+        )
+
+        # ---- Bank Data ----
+        bank_agg = BankStatement.objects.filter(user=user).aggregate(
+            inflow=Sum("total_inflow"),
+            outflow=Sum("total_outflow"),
+            loan_emi=Sum("loan_emi"),
+        )
+
+        # ---- GST Compliance ----
+        gst_pending = GSTRecord.objects.filter(
+            user=user, filing_status=False
+        ).exists()
+
+        # ---- Documents Coverage ----
+        doc_count = FinancialDocument.objects.filter(user=user).count()
+
+        # ---- Derived Metrics ----
+        cash_flow_status = "Positive"
+        if bank_agg["inflow"] and bank_agg["outflow"]:
+            if bank_agg["inflow"] - bank_agg["outflow"] < 0:
+                cash_flow_status = "Negative"
+
+        response = {
+            "health_score": health.score if health else None,
+            "risk_level": health.risk_level if health else "Unknown",
+            "cash_flow_status": cash_flow_status,
+            "credit_exposure": bank_agg["loan_emi"] or 0,
+            "compliance_status": "GST Pending" if gst_pending else "Compliant",
+            "data_coverage": doc_count,
+            "recommendations": [
+                "Upload missing GST returns" if gst_pending else "GST filings are up to date",
+                "Reduce loan EMI burden if possible",
+                "Improve cash inflow consistency",
+            ],
+        }
+
+        return Response(response)
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import FinancialDocument
+
+class DocumentListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        docs = FinancialDocument.objects.filter(user=request.user).order_by("-uploaded_at")
+
+        data = [
+            {
+                "id": d.id,
+                "file_name": d.file.name.split("/")[-1],
+                "file_type": d.file_type,
+                "uploaded_at": d.uploaded_at,
+                "file_url": d.file.url,
+            }
+            for d in docs
+        ]
+
+        return Response(data)
