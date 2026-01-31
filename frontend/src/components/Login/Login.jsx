@@ -4,8 +4,11 @@ import styles from "./Login.module.css";
 import { loginUser } from "../../api/authApi";
 import { FaUser, FaLock } from "react-icons/fa";
 
+import { useAuth } from "../../context/AuthContext";
+
 function Login() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const [form, setForm] = useState({
     username: "",
@@ -37,6 +40,8 @@ function Login() {
       // Store JWT tokens
       localStorage.setItem("accessToken", response.data.access);
       localStorage.setItem("refreshToken", response.data.refresh);
+
+      setUser({ name: form.username });
 
       // Redirect ONLY after successful login
       navigate("/", { replace: true });
