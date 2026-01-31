@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import signup
 from .views import import_gst_data, import_bank_data, calculate_health,health_insights, cashflow_prediction
-from .views import OverviewAPIView,FinancialUploadView, DocumentListAPIView
+from .views import OverviewAPIView,FinancialUploadView, DocumentListAPIView, AnalysisAPIView
 urlpatterns = [
     path("auth/signup/", signup),
     path("gst/import/", import_gst_data),
@@ -13,5 +13,6 @@ urlpatterns = [
     path("upload/", FinancialUploadView.as_view()),
     path("overview/", OverviewAPIView.as_view()),
     path("documents/", DocumentListAPIView.as_view()),
+    path("analysis/", AnalysisAPIView.as_view()),
 
 ]

@@ -316,3 +316,54 @@ class DocumentListAPIView(APIView):
         ]
 
         return Response(data)
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import FinancialHealthScore, BankStatement
+
+class AnalysisAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        health = (
+            FinancialHealthScore.objects
+            .filter(user=user)
+            .order_by("-created_at")
+            .first()
+        )
+
+        bank_data = BankStatement.objects.filter(user=user).order_by("created_at")
+
+        cash_flow_trend = [
+            {
+                "month": b.month,
+                "net_flow": b.total_inflow - b.total_outflow
+            }
+            for b in bank_data
+        ]
+
+        # ✅ FALLBACK (for early stage / demo / empty DB)
+        if not cash_flow_trend:
+            cash_flow_trend = [
+                {"month": "Jan", "net_flow": 8000},
+                {"month": "Feb", "net_flow": -3000},
+                {"month": "Mar", "net_flow": 12000},
+                {"month": "Apr", "net_flow": 5000},
+            ]
+
+        response = {
+            "health_score": health.score if health else None,
+            "risk_level": health.risk_level if health else "Unknown",
+            "cash_flow_trend": cash_flow_trend,
+            "insights": [
+                "Cash flow shows month-to-month volatility",
+                "Loan EMI obligations are affecting liquidity",
+                "Improving receivables can increase the health score",
+            ],
+        }
+
+        return Response(response)
+
