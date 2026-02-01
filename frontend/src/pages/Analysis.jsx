@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { getAnalysisData } from "../api/analysisApi";
 import {
@@ -39,8 +38,8 @@ export default function Analysis() {
         </p>
       </div>
 
-      {/* Score Band (DIFFERENT from Overview) */}
-      <div className="glass-card p-6 mb-10 flex items-center justify-between">
+      {/* Score Band */}
+      <div className="glass-card p-6 mb-8 flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500">Health Score</p>
           <p className="text-4xl font-bold text-indigo-600">
@@ -50,15 +49,39 @@ export default function Analysis() {
 
         <div>
           <p className="text-sm text-slate-500">Risk Level</p>
-          <p className="text-2xl font-semibold text-amber-600">
+          <p
+            className={`text-2xl font-semibold ${
+              data.risk_level === "High"
+                ? "text-rose-600"
+                : data.risk_level === "Medium"
+                ? "text-amber-600"
+                : "text-emerald-600"
+            }`}
+          >
             {data.risk_level}
           </p>
         </div>
       </div>
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        {[
+          { label: "Total Revenue", value: data.kpis.total_revenue },
+          { label: "Total Expenses", value: data.kpis.total_expenses },
+          { label: "Net Cash Flow", value: data.kpis.net_cash_flow },
+          { label: "Avg Monthly Cash", value: data.kpis.avg_monthly_cash },
+        ].map((item, i) => (
+          <div key={i} className="glass-card p-4">
+            <p className="text-xs text-slate-500">{item.label}</p>
+            <p className="text-xl font-bold text-slate-900">
+              ₹{item.value.toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
-
         {/* Cash Flow Trend */}
         <div className="glass-card p-6">
           <h3 className="font-semibold text-slate-900 mb-4">
@@ -81,10 +104,10 @@ export default function Analysis() {
           </ResponsiveContainer>
         </div>
 
-        {/* Net Cash Comparison */}
+        {/* Inflow vs Outflow */}
         <div className="glass-card p-6">
           <h3 className="font-semibold text-slate-900 mb-4">
-            Net Cash Comparison
+            Cash In vs Cash Out
           </h3>
 
           <ResponsiveContainer width="100%" height={280}>
@@ -93,30 +116,38 @@ export default function Analysis() {
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip />
-              <Bar
-                dataKey="net_flow"
-                fill="#ec4899"
-                radius={[6, 6, 0, 0]}
-              />
+              <Bar dataKey="inflow" fill="#22c55e" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="outflow" fill="#ef4444" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-
       </div>
 
       {/* AI Insights */}
       <div className="glass-card p-6">
-        <h3 className="font-semibold text-slate-900 mb-2">
+        <h3 className="font-semibold text-slate-900 mb-4">
           AI Insights & Recommendations
         </h3>
 
-        <ul className="space-y-2 text-sm text-slate-700">
-          {data.insights.map((item, i) => (
-            <li key={i} className="flex gap-2">
-              <span className="mt-1 w-2 h-2 rounded-full bg-indigo-500" />
-              {item}
-            </li>
-          ))}
+        <ul className="space-y-3 text-sm">
+          {data.insights.map((item, i) => {
+            const color =
+              item.severity === "critical"
+                ? "bg-rose-100 text-rose-700"
+                : item.severity === "warning"
+                ? "bg-amber-100 text-amber-700"
+                : "bg-emerald-100 text-emerald-700";
+
+            return (
+              <li
+                key={i}
+                className={`p-3 rounded-xl flex items-start gap-3 ${color}`}
+              >
+                <span className="mt-1 w-2 h-2 rounded-full bg-current" />
+                {item.text}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

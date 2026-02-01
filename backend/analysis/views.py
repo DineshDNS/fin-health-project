@@ -94,3 +94,100 @@ class OverviewView(APIView):
             "actionable_insights": actionable_insights,
             "product_recommendations": product_recommendations,
         })
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+
+class AnalysisMetricsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        Financial Analytics & Scores
+        (Used by Analysis.jsx)
+        """
+
+
+        # MOCKED DATA (TEMP)
+        # Later replace with parsed DB data
+
+
+        cash_flow_trend = [
+            {
+                "month": "Jan",
+                "inflow": 300000,
+                "outflow": 280000,
+                "net_flow": 20000,
+            },
+            {
+                "month": "Feb",
+                "inflow": 260000,
+                "outflow": 290000,
+                "net_flow": -30000,
+            },
+            {
+                "month": "Mar",
+                "inflow": 340000,
+                "outflow": 310000,
+                "net_flow": 30000,
+            },
+        ]
+
+        total_revenue = sum(item["inflow"] for item in cash_flow_trend)
+        total_expenses = sum(item["outflow"] for item in cash_flow_trend)
+        net_cash_flow = total_revenue - total_expenses
+        avg_monthly_cash = int(net_cash_flow / len(cash_flow_trend))
+
+        # -----------------------------
+        # Risk level (simple logic for now)
+        # -----------------------------
+        if net_cash_flow < 0:
+            risk_level = "High"
+        elif net_cash_flow < 50000:
+            risk_level = "Medium"
+        else:
+            risk_level = "Low"
+
+        # -----------------------------
+        # Insights (rule-based v1)
+        # -----------------------------
+        insights = []
+
+        if net_cash_flow < 0:
+            insights.append({
+                "text": "Negative net cash flow detected across the period",
+                "severity": "critical",
+            })
+
+        if any(item["net_flow"] < 0 for item in cash_flow_trend):
+            insights.append({
+                "text": "Cash flow volatility detected in some months",
+                "severity": "warning",
+            })
+
+        if cash_flow_trend[-1]["net_flow"] > 0:
+            insights.append({
+                "text": "Positive cash flow recovery trend observed recently",
+                "severity": "opportunity",
+            })
+
+        # -----------------------------
+        # Final response
+        # -----------------------------
+        return Response({
+            "health_score": 68,
+            "risk_level": risk_level,
+
+            "kpis": {
+                "total_revenue": total_revenue,
+                "total_expenses": total_expenses,
+                "net_cash_flow": net_cash_flow,
+                "avg_monthly_cash": avg_monthly_cash,
+            },
+
+            "cash_flow_trend": cash_flow_trend,
+
+            "insights": insights,
+        })
