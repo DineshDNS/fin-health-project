@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -16,6 +15,7 @@ class SignupView(APIView):
 
     def post(self, request):
         username = request.data.get("username")
+        email = request.data.get("email")
         password = request.data.get("password")
 
         if not username or not password:
@@ -30,30 +30,16 @@ class SignupView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        User.objects.create_user(username=username, password=password)
+        User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+        )
 
         return Response(
             {"message": "User created successfully"},
             status=status.HTTP_201_CREATED,
         )
-
-
-class LoginView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        user = authenticate(
-            username=request.data.get("username"),
-            password=request.data.get("password"),
-        )
-
-        if user is None:
-            return Response(
-                {"error": "Invalid credentials"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        return Response({"message": "Login successful"})
 
 
 # -------------------------
@@ -65,7 +51,6 @@ class UserProfileView(APIView):
 
     def get(self, request):
         user = request.user
-
         return Response({
             "username": user.username,
             "email": user.email,

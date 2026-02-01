@@ -13,7 +13,7 @@ urlpatterns = [
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 
     # App APIs
-    path("api/", include("documents.urls")),
     path("api/users/", include("users.urls")),
+    path("api/", include("documents.urls")),
     path("api/analysis/", include("analysis.urls")),
 ]
