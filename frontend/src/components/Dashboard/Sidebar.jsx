@@ -19,34 +19,40 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-[280px] h-full bg-slate-900 text-slate-200 flex flex-col">
-      
-      {/*Top: Title / Logo */}
+    <aside
+      className="w-[280px] h-full flex flex-col
+      bg-gradient-to-b from-slate-800 via-slate-900 to-indigo-900
+      text-slate-200 shadow-2xl"
+    >
+      {/* ================= Brand ================= */}
       <div className="flex items-center gap-3 px-6 py-6">
-        {/* Simple mark */}
-        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold">
+        <div
+          className="w-11 h-11 rounded-xl
+          bg-gradient-to-br from-indigo-400 to-violet-600
+          flex items-center justify-center
+          text-white font-bold text-lg shadow-lg"
+        >
           F
         </div>
 
-        {/* Title */}
-        <span className="text-lg font-semibold text-white">
+        <span className="text-lg font-semibold text-white tracking-wide">
           FinHealth
         </span>
       </div>
 
       {/* Divider */}
-      <div className="mx-6 border-t border-slate-700/60" />
+      <div className="mx-6 border-t border-white/10" />
 
-      {/* Middle: Navigation */}
-      <nav className="flex-1 px-4 py-4 space-y-2">
+      {/* ================= Navigation ================= */}
+      <nav className="flex-1 px-4 py-6 space-y-2">
         <NavLink to="/" end className={navClass}>
           <LayoutDashboard size={18} />
-          Overview
+          Dashboard
         </NavLink>
 
         <NavLink to="/upload" className={navClass}>
           <Upload size={18} />
-          Upload Financials
+          Upload Files
         </NavLink>
 
         <NavLink to="/documents" className={navClass}>
@@ -66,13 +72,14 @@ export default function Sidebar() {
       </nav>
 
       {/* Divider */}
-      <div className="mx-6 border-t border-slate-700/60" />
+      <div className="mx-6 border-t border-white/10" />
 
-      {/* Bottom: Logout */}
-      <div className="px-10 py-8">
+      {/* ================= Logout ================= */}
+      <div className="px-6 py-6">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 text-sm font-medium text-red-400 hover:text-red-500 transition"
+          className="flex items-center gap-3 text-sm font-medium
+          text-rose-300 hover:text-rose-400 transition"
         >
           <LogOut size={18} />
           Logout
@@ -82,10 +89,11 @@ export default function Sidebar() {
   );
 }
 
+/* ================= NavLink styles ================= */
 const navClass = ({ isActive }) =>
-  `flex items-center gap-4 px-5 py-3 rounded-xl text-sm font-medium transition
+  `flex items-center gap-4 px-5 py-3 rounded-xl text-sm font-medium transition-all
    ${
      isActive
-       ? "bg-white text-slate-900 shadow-sm"
-       : "text-slate-300 hover:bg-slate-700 hover:text-white"
+       ? "bg-gradient-to-r from-indigo-400/90 to-violet-500/90 text-white shadow-lg"
+       : "text-slate-300 hover:bg-white/10 hover:text-white"
    }`;

@@ -25,6 +25,10 @@ export default function UploadFinancials() {
     ],
   };
 
+  const inputClass =
+    "mt-2 w-full rounded-lg bg-white border border-slate-300 px-3 py-2 " +
+    "focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none";
+
   const handleUpload = async () => {
     if (!file || !category || !docType || !periodFrom || !periodTo) {
       setMessage("Please complete all required fields.");
@@ -42,10 +46,9 @@ export default function UploadFinancials() {
     try {
       setLoading(true);
       setMessage("");
-
       await uploadFinancialDocument(formData);
-
       setMessage("Upload successful. File is being processed.");
+
       setFile(null);
       setCategory("");
       setDocType("");
@@ -62,6 +65,7 @@ export default function UploadFinancials() {
   return (
     <div className="min-h-full flex justify-center items-start p-10 bg-gradient-to-br from-rose-100 via-pink-100 to-amber-100">
       <div className="w-full max-w-3xl">
+
         {/* Header */}
         <div className="mb-8 text-center">
           <h2 className="text-2xl font-semibold text-slate-900">
@@ -74,6 +78,7 @@ export default function UploadFinancials() {
 
         {/* Form Card */}
         <div className="glass-card p-10 space-y-6">
+
           {/* Step 1 */}
           <div>
             <label className="text-sm font-medium text-slate-700">
@@ -85,7 +90,7 @@ export default function UploadFinancials() {
                 setCategory(e.target.value);
                 setDocType("");
               }}
-              className="mt-2 w-full rounded-lg border-slate-300"
+              className={inputClass}
             >
               <option value="">Select category</option>
               <option value="FIN">Financial Statements</option>
@@ -103,7 +108,7 @@ export default function UploadFinancials() {
               value={docType}
               onChange={(e) => setDocType(e.target.value)}
               disabled={!category}
-              className="mt-2 w-full rounded-lg border-slate-300 disabled:bg-slate-100"
+              className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-400`}
             >
               <option value="">
                 {category ? "Select document type" : "Select category first"}
@@ -127,13 +132,13 @@ export default function UploadFinancials() {
                 type="date"
                 value={periodFrom}
                 onChange={(e) => setPeriodFrom(e.target.value)}
-                className="rounded-lg border-slate-300"
+                className={inputClass}
               />
               <input
                 type="date"
                 value={periodTo}
                 onChange={(e) => setPeriodTo(e.target.value)}
-                className="rounded-lg border-slate-300"
+                className={inputClass}
               />
             </div>
           </div>
@@ -148,12 +153,12 @@ export default function UploadFinancials() {
               value={source}
               onChange={(e) => setSource(e.target.value)}
               placeholder="e.g. HDFC Bank, GST Portal, Tally"
-              className="mt-2 w-full rounded-lg border-slate-300"
+              className={inputClass}
             />
           </div>
 
           {/* Step 5 */}
-          <div className="border-2 border-dashed border-rose-300 rounded-2xl p-8 text-center">
+          <div className="border-2 border-dashed border-indigo-300 bg-white/70 rounded-2xl p-8 text-center">
             <p className="text-sm font-medium text-slate-700 mb-1">
               5. Upload File *
             </p>
@@ -164,7 +169,7 @@ export default function UploadFinancials() {
               type="file"
               accept=".csv,.xlsx,.pdf"
               onChange={(e) => setFile(e.target.files[0])}
-              className="block mx-auto text-sm"
+              className="block mx-auto text-sm text-slate-700"
             />
           </div>
 
@@ -172,7 +177,10 @@ export default function UploadFinancials() {
           <button
             onClick={handleUpload}
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold hover:opacity-90 transition"
+            className="w-full py-3 rounded-xl
+                       bg-gradient-to-r from-indigo-500 to-violet-500
+                       text-white font-semibold
+                       hover:opacity-90 transition"
           >
             {loading ? "Uploading..." : "Upload & Process"}
           </button>
@@ -184,7 +192,7 @@ export default function UploadFinancials() {
           )}
         </div>
 
-        {/* Footer note */}
+        {/* Footer */}
         <p className="mt-6 text-xs text-center text-slate-600">
           You can upload multiple documents over time to improve analysis accuracy.
           All data is encrypted and securely processed.
