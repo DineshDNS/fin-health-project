@@ -14,5 +14,6 @@ urlpatterns = [
 
     # App APIs
     path("api/", include("documents.urls")),
+    path("api/users/", include("users.urls")),
     path("api/analysis/", include("analysis.urls")),
 ]
