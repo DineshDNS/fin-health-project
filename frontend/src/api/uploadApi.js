@@ -7,7 +7,7 @@ export function uploadFinancialDocument(formData) {
 
   return axios.post(`${API_BASE_URL}/upload/`, formData, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: token ? `Bearer ${token}` : "",
       "Content-Type": "multipart/form-data",
     },
   });

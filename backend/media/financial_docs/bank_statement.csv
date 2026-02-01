@@ -1,6 +1,0 @@
-date,description,credit,debit,balance
-2025-01-01,Opening Balance,0,0,100000
-2025-01-05,Customer Payment,50000,0,150000
-2025-01-10,Office Rent,0,20000,130000
-2025-01-15,Loan EMI,0,15000,115000
-2025-01-20,Vendor Payment,0,25000,90000

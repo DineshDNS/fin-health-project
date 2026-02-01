@@ -36,8 +36,9 @@ function Signup() {
     // Only send what backend expects
     const payload = {
       username: form.username,
+      email: form.email,   
       password: form.password,
-    };
+   };
 
     try {
       setLoading(true);

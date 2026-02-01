@@ -7,5 +7,6 @@ export function signupUser(data) {
 }
 
 export function loginUser(data) {
-  return axios.post(`${API_BASE_URL}/token/`, data);
+  // ✅ FIXED endpoint
+  return axios.post(`${API_BASE_URL}/auth/login/`, data);
 }

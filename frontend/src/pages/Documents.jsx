@@ -4,23 +4,30 @@ import { getDocuments } from "../api/documentsApi";
 export default function Documents() {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getDocuments().then((res) => {
-      setDocs(res.data);
-      setLoading(false);
-    });
+    getDocuments()
+      .then((res) => {
+        setDocs(res.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Unable to load documents.");
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
     return <p className="text-slate-700">Loading documents...</p>;
   }
 
+  if (error) {
+    return <p className="text-rose-600">{error}</p>;
+  }
+
   return (
-    <div
-      className="min-h-full p-8 rounded-3xl
-      bg-gradient-to-br from-rose-100 via-pink-100 to-amber-100"
-    >
+    <div className="min-h-full p-8 rounded-3xl bg-gradient-to-br from-rose-100 via-pink-100 to-amber-100">
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-semibold text-slate-900">
@@ -32,7 +39,7 @@ export default function Documents() {
       </div>
 
       {/* Documents List */}
-      <div className="glass-card p-6">
+      <div className="glass-card p-6 overflow-x-auto">
         {docs.length === 0 ? (
           <p className="text-sm text-slate-600">
             No documents uploaded yet.
@@ -42,6 +49,7 @@ export default function Documents() {
             <thead className="text-slate-500 border-b">
               <tr>
                 <th className="py-2 text-left">File Name</th>
+                <th className="py-2 text-left">Category</th>
                 <th className="py-2 text-left">Type</th>
                 <th className="py-2 text-left">Uploaded</th>
                 <th className="py-2 text-left">Action</th>
@@ -57,7 +65,10 @@ export default function Documents() {
                     {doc.file_name}
                   </td>
                   <td className="py-3 uppercase text-slate-600">
-                    {doc.file_type}
+                    {doc.category}
+                  </td>
+                  <td className="py-3 text-slate-600">
+                    {doc.document_type}
                   </td>
                   <td className="py-3 text-slate-600">
                     {new Date(doc.uploaded_at).toLocaleDateString()}
