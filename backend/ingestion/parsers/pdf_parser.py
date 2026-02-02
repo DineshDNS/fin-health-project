@@ -2,11 +2,19 @@ from PyPDF2 import PdfReader
 
 
 def extract_pdf_text(path: str, max_chars: int = 5000) -> str:
-    reader = PdfReader(path)
+    try:
+        reader = PdfReader(path)
+    except Exception:
+        return ""
+
     text = ""
 
     for page in reader.pages:
-        page_text = page.extract_text()
+        try:
+            page_text = page.extract_text()
+        except Exception:
+            page_text = None
+
         if page_text:
             text += page_text + "\n"
 

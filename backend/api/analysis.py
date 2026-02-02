@@ -6,6 +6,7 @@ from ingestion.models import IngestedDocument
 from features.feature_store import build_feature_store
 from intelligence.health_score import calculate_financial_health_score
 from intelligence.risk_engine import assess_risk
+from intelligence.defaults import BANK_DEFAULT, GST_DEFAULT
 
 
 class AnalysisAPIView(APIView):
@@ -28,26 +29,31 @@ class AnalysisAPIView(APIView):
             .first()
         )
 
-        bank_features = None
-        gst_features = None
-
-        if bank_doc:
+        # ---------------- BANK ----------------
+        if bank_doc and bank_doc.parsed_data:
             bank_features = build_feature_store(
                 bank_doc.parsed_data,
                 "BANK"
             ).get("bank_features")
+        else:
+            bank_features = BANK_DEFAULT.copy()
 
-        if gst_doc:
+        # ---------------- GST ----------------
+        if gst_doc and gst_doc.parsed_data:
             gst_features = build_feature_store(
                 gst_doc.parsed_data,
                 "GST"
             ).get("gst_features")
+        else:
+            gst_features = GST_DEFAULT.copy()
 
+        # ---------------- HEALTH SCORE ----------------
         health_score = calculate_financial_health_score(
             bank_features,
             gst_features
         )
 
+        # ---------------- RISK ----------------
         risk = assess_risk(bank_features)
 
         return Response({

@@ -4,10 +4,12 @@ from rest_framework.response import Response
 
 from ingestion.models import IngestedDocument
 from features.feature_store import build_feature_store
+
 from intelligence.health_score import calculate_financial_health_score
 from intelligence.risk_engine import assess_risk
 from intelligence.insights_engine import generate_actionable_insights
 from intelligence.product_engine import recommend_products
+from intelligence.defaults import BANK_DEFAULT, GST_DEFAULT
 
 
 class OverviewAPIView(APIView):
@@ -31,20 +33,23 @@ class OverviewAPIView(APIView):
             .first()
         )
 
-        bank_features = None
-        gst_features = None
-
-        if bank_doc:
+        # ---- BANK FEATURES (with defaults) ----
+        if bank_doc and bank_doc.parsed_data:
             bank_features = build_feature_store(
                 bank_doc.parsed_data,
                 "BANK"
             ).get("bank_features")
+        else:
+            bank_features = BANK_DEFAULT.copy()
 
-        if gst_doc:
+        # ---- GST FEATURES (with defaults) ----
+        if gst_doc and gst_doc.parsed_data:
             gst_features = build_feature_store(
                 gst_doc.parsed_data,
                 "GST"
             ).get("gst_features")
+        else:
+            gst_features = GST_DEFAULT.copy()
 
         # ---- Health score ----
         health_score = calculate_financial_health_score(
@@ -79,8 +84,8 @@ class OverviewAPIView(APIView):
             "financial_health_score": health_score,
             "risk_level": risk_level,
             "risk_alerts": (
-                risk_data["priority_issues"]
-                + risk_data["warnings"]
+                risk_data.get("priority_issues", [])
+                + risk_data.get("warnings", [])
             ),
             "actionable_insights": insights,
             "product_recommendations": products,
