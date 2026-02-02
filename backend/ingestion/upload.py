@@ -11,6 +11,9 @@ from ingestion.parsers.gst_parser import parse_gst_dataframe
 from ingestion.parsers.financial_parser import parse_financial_dataframe
 from ingestion.parsers.pdf_parser import extract_pdf_text
 
+# ✅ CRITICAL FIX IMPORT
+from ingestion.utils.json_safe import make_json_safe
+
 
 class UploadDocumentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -145,9 +148,11 @@ class UploadDocumentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Save parsing result
+        # =====================================================
+        # ✅ FINAL SAVE (JSON-SAFE)
+        # =====================================================
         doc.detected_type = detected_type
-        doc.parsed_data = parsed
+        doc.parsed_data = make_json_safe(parsed)
         doc.save()
 
         return Response(

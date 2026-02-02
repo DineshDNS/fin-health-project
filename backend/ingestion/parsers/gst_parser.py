@@ -16,13 +16,13 @@ def parse_gst_dataframe(df):
         "total_gst": 0.0,
     }
 
-    # 🟢 GSTR-1 (invoice level)
+    # GSTR-1 (invoice level)
     if {"taxable_value", "gst_amount"}.issubset(df.columns):
         parsed["return_type"] = "GSTR1"
         parsed["total_taxable_value"] = float(df["taxable_value"].fillna(0).sum())
         parsed["total_gst"] = float(df["gst_amount"].fillna(0).sum())
 
-    # 🟡 GSTR-3B (summary level)
+    # GSTR-3B (summary level)
     elif {"total_taxable_value", "total_gst"}.issubset(df.columns):
         parsed["return_type"] = "GSTR3B"
         parsed["total_taxable_value"] = float(df["total_taxable_value"].fillna(0).sum())
