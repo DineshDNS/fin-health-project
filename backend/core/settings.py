@@ -54,8 +54,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
 
     'users',
-    'documents',
-    'analysis',
+    "ingestion.apps.IngestionConfig", 
 ]
 
 MEDIA_URL = "/media/"
@@ -161,3 +160,5 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

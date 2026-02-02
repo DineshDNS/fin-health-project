@@ -1,17 +1,17 @@
 from django.urls import path
 from .views import (
-    SignupView,
+    SignupAPIView,
     UserProfileView,
     UpdateUserProfileView,
     ChangePasswordView,
 )
 
 urlpatterns = [
-    # Public
-    path("signup/", SignupView.as_view(), name="signup"),
+    # AUTH
+    path("users/signup/", SignupAPIView.as_view(), name="signup"),
 
-    # Protected
-    path("me/", UserProfileView.as_view()),
-    path("update/", UpdateUserProfileView.as_view()),
-    path("change-password/", ChangePasswordView.as_view()),
+    # SETTINGS / PROFILE
+    path("me/", UserProfileView.as_view(), name="user-profile"),
+    path("update/", UpdateUserProfileView.as_view(), name="user-update"),
+    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
 ]

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { uploadFinancialDocument } from "../api/uploadApi";
+import { uploadFinancialDocument } from "../api/ingestionApi";
 
 export default function UploadFinancials() {
   const [file, setFile] = useState(null);
@@ -25,10 +25,6 @@ export default function UploadFinancials() {
     ],
   };
 
-  const inputClass =
-    "mt-2 w-full rounded-lg bg-white border border-slate-300 px-3 py-2 " +
-    "focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none";
-
   const handleUpload = async () => {
     if (!file || !category || !docType || !periodFrom || !periodTo) {
       setMessage("Please complete all required fields.");
@@ -46,7 +42,9 @@ export default function UploadFinancials() {
     try {
       setLoading(true);
       setMessage("");
+
       await uploadFinancialDocument(formData);
+
       setMessage("Upload successful. File is being processed.");
 
       setFile(null);
@@ -55,7 +53,8 @@ export default function UploadFinancials() {
       setPeriodFrom("");
       setPeriodTo("");
       setSource("");
-    } catch {
+    } catch (error) {
+      console.error(error);
       setMessage("Upload failed. Please try again.");
     } finally {
       setLoading(false);
@@ -65,8 +64,6 @@ export default function UploadFinancials() {
   return (
     <div className="min-h-full flex justify-center items-start p-10 bg-gradient-to-br from-rose-100 via-pink-100 to-amber-100">
       <div className="w-full max-w-3xl">
-
-        {/* Header */}
         <div className="mb-8 text-center">
           <h2 className="text-2xl font-semibold text-slate-900">
             Upload Financial Documents
@@ -76,127 +73,86 @@ export default function UploadFinancials() {
           </p>
         </div>
 
-        {/* Form Card */}
         <div className="glass-card p-10 space-y-6">
+          {/* Category */}
+          <select
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setDocType("");
+            }}
+            className="w-full rounded-lg border px-3 py-2"
+          >
+            <option value="">Select category</option>
+            <option value="FIN">Financial Statements</option>
+            <option value="BANK">Bank Statements</option>
+            <option value="GST">GST Returns</option>
+          </select>
 
-          {/* Step 1 */}
-          <div>
-            <label className="text-sm font-medium text-slate-700">
-              1. Document Category *
-            </label>
-            <select
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
-                setDocType("");
-              }}
-              className={inputClass}
-            >
-              <option value="">Select category</option>
-              <option value="FIN">Financial Statements</option>
-              <option value="BANK">Bank Statements</option>
-              <option value="GST">GST Returns</option>
-            </select>
-          </div>
+          {/* Document Type */}
+          <select
+            value={docType}
+            onChange={(e) => setDocType(e.target.value)}
+            disabled={!category}
+            className="w-full rounded-lg border px-3 py-2"
+          >
+            <option value="">Select document type</option>
+            {category &&
+              documentTypeOptions[category].map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+          </select>
 
-          {/* Step 2 */}
-          <div>
-            <label className="text-sm font-medium text-slate-700">
-              2. Document Type *
-            </label>
-            <select
-              value={docType}
-              onChange={(e) => setDocType(e.target.value)}
-              disabled={!category}
-              className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-400`}
-            >
-              <option value="">
-                {category ? "Select document type" : "Select category first"}
-              </option>
-              {category &&
-                documentTypeOptions[category].map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-            </select>
-          </div>
-
-          {/* Step 3 */}
-          <div>
-            <label className="text-sm font-medium text-slate-700">
-              3. Period Covered *
-            </label>
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input
-                type="date"
-                value={periodFrom}
-                onChange={(e) => setPeriodFrom(e.target.value)}
-                className={inputClass}
-              />
-              <input
-                type="date"
-                value={periodTo}
-                onChange={(e) => setPeriodTo(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <div>
-            <label className="text-sm font-medium text-slate-700">
-              4. Source (optional)
-            </label>
+          {/* Period */}
+          <div className="grid grid-cols-2 gap-4">
             <input
-              type="text"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              placeholder="e.g. HDFC Bank, GST Portal, Tally"
-              className={inputClass}
+              type="date"
+              value={periodFrom}
+              onChange={(e) => setPeriodFrom(e.target.value)}
+              className="rounded-lg border px-3 py-2"
+            />
+            <input
+              type="date"
+              value={periodTo}
+              onChange={(e) => setPeriodTo(e.target.value)}
+              className="rounded-lg border px-3 py-2"
             />
           </div>
 
-          {/* Step 5 */}
-          <div className="border-2 border-dashed border-indigo-300 bg-white/70 rounded-2xl p-8 text-center">
-            <p className="text-sm font-medium text-slate-700 mb-1">
-              5. Upload File *
-            </p>
-            <p className="text-xs text-slate-500 mb-4">
-              Supported formats: CSV, XLSX, PDF
-            </p>
+          {/* Source */}
+          <input
+            type="text"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder="Source (optional)"
+            className="rounded-lg border px-3 py-2"
+          />
+
+          {/* File */}
+          <div className="border-2 border-dashed rounded-xl p-6 text-center bg-white/40">
             <input
               type="file"
               accept=".csv,.xlsx,.pdf"
               onChange={(e) => setFile(e.target.files[0])}
-              className="block mx-auto text-sm text-slate-700"
+              className="mx-auto"
             />
+            <p className="text-xs text-slate-500 mt-2">
+              Supported formats: CSV, XLSX, PDF
+            </p>
           </div>
 
-          {/* Submit */}
           <button
             onClick={handleUpload}
             disabled={loading}
-            className="w-full py-3 rounded-xl
-                       bg-gradient-to-r from-indigo-500 to-violet-500
-                       text-white font-semibold
-                       hover:opacity-90 transition"
+            className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition text-white font-semibold shadow-md"
           >
             {loading ? "Uploading..." : "Upload & Process"}
           </button>
 
-          {message && (
-            <p className="text-sm text-center text-slate-700">
-              {message}
-            </p>
-          )}
+          {message && <p className="text-center text-sm">{message}</p>}
         </div>
-
-        {/* Footer */}
-        <p className="mt-6 text-xs text-center text-slate-600">
-          You can upload multiple documents over time to improve analysis accuracy.
-          All data is encrypted and securely processed.
-        </p>
       </div>
     </div>
   );

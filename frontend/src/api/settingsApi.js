@@ -1,31 +1,13 @@
-import axios from "axios";
+import api from "./apiClient";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+export const getUserProfile = () => {
+  return api.get("/users/me/");
+};
 
-function authHeaders() {
-  return {
-    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-  };
-}
+export const updateUserProfile = (data) => {
+  return api.patch("/users/update/", data);
+};
 
-export function getUserProfile() {
-  return axios.get(`${API_BASE_URL}/users/me/`, {
-    headers: authHeaders(),
-  });
-}
-
-export function updateUserProfile(data) {
-  return axios.patch(
-    `${API_BASE_URL}/users/update/`,
-    data,
-    { headers: authHeaders() }
-  );
-}
-
-export function changePassword(data) {
-  return axios.post(
-    `${API_BASE_URL}/users/change-password/`,
-    data,
-    { headers: authHeaders() }
-  );
-}
+export const changePassword = (data) => {
+  return api.post("/users/change-password/", data);
+};

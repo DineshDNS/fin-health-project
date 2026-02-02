@@ -6,17 +6,14 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 
-# -------------------------
-# AUTH
-# -------------------------
 
-class SignupView(APIView):
+class SignupAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         username = request.data.get("username")
-        email = request.data.get("email")
         password = request.data.get("password")
+        email = request.data.get("email", "")
 
         if not username or not password:
             return Response(
@@ -32,14 +29,15 @@ class SignupView(APIView):
 
         User.objects.create_user(
             username=username,
-            email=email,
             password=password,
+            email=email,
         )
 
         return Response(
             {"message": "User created successfully"},
             status=status.HTTP_201_CREATED,
         )
+
 
 
 # -------------------------

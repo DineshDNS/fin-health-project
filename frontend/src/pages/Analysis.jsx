@@ -14,20 +14,27 @@ import {
 
 export default function Analysis() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getAnalysisData().then((res) => setData(res.data));
+    getAnalysisData()
+      .then((res) => setData(res.data))
+      .catch((err) => {
+        console.error(err);
+        setError("Unable to load analysis data.");
+      });
   }, []);
+
+  if (error) {
+    return <p className="text-rose-600">{error}</p>;
+  }
 
   if (!data) {
     return <p className="text-slate-700">Loading analysis...</p>;
   }
 
   return (
-    <div
-      className="min-h-full p-8 rounded-3xl
-      bg-gradient-to-br from-rose-100 via-pink-100 to-amber-100"
-    >
+    <div className="min-h-full p-8 rounded-3xl bg-gradient-to-br from-rose-100 via-pink-100 to-amber-100">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-semibold text-slate-900">
@@ -58,7 +65,7 @@ export default function Analysis() {
                 : "text-emerald-600"
             }`}
           >
-            {data.risk_level}
+            {data.risk_level ?? "—"}
           </p>
         </div>
       </div>
@@ -66,15 +73,15 @@ export default function Analysis() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         {[
-          { label: "Total Revenue", value: data.kpis.total_revenue },
-          { label: "Total Expenses", value: data.kpis.total_expenses },
-          { label: "Net Cash Flow", value: data.kpis.net_cash_flow },
-          { label: "Avg Monthly Cash", value: data.kpis.avg_monthly_cash },
+          { label: "Total Revenue", value: data.kpis?.total_revenue },
+          { label: "Total Expenses", value: data.kpis?.total_expenses },
+          { label: "Net Cash Flow", value: data.kpis?.net_cash_flow },
+          { label: "Avg Monthly Cash", value: data.kpis?.avg_monthly_cash },
         ].map((item, i) => (
           <div key={i} className="glass-card p-4">
             <p className="text-xs text-slate-500">{item.label}</p>
             <p className="text-xl font-bold text-slate-900">
-              ₹{item.value.toLocaleString()}
+              ₹{item.value?.toLocaleString() ?? "—"}
             </p>
           </div>
         ))}
@@ -89,7 +96,7 @@ export default function Analysis() {
           </h3>
 
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={data.cash_flow_trend}>
+            <LineChart data={data.cash_flow_trend ?? []}>
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip />
@@ -111,7 +118,7 @@ export default function Analysis() {
           </h3>
 
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={data.cash_flow_trend}>
+            <BarChart data={data.cash_flow_trend ?? []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
@@ -130,7 +137,7 @@ export default function Analysis() {
         </h3>
 
         <ul className="space-y-3 text-sm">
-          {data.insights.map((item, i) => {
+          {(data.insights ?? []).map((item, i) => {
             const color =
               item.severity === "critical"
                 ? "bg-rose-100 text-rose-700"

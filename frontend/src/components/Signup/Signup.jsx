@@ -1,10 +1,10 @@
 import { useState } from "react";
-import styles from "./Signup.module.css";
 import { Link, useNavigate } from "react-router-dom";
+import styles from "./Signup.module.css";
 import { signupUser } from "../../api/authApi";
 import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
 
-function Signup() {
+export default function Signup() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -22,7 +22,6 @@ function Signup() {
   };
 
   const handleSignup = async () => {
-    // Frontend validation
     if (!form.username || !form.password || !form.confirmPassword) {
       setMessage("Username and password are required");
       return;
@@ -33,25 +32,22 @@ function Signup() {
       return;
     }
 
-    // Only send what backend expects
-    const payload = {
-      username: form.username,
-      email: form.email,   
-      password: form.password,
-   };
-
     try {
       setLoading(true);
       setMessage("");
 
-      await signupUser(payload);
+      await signupUser({
+        username: form.username,
+        email: form.email,
+        password: form.password,
+      });
 
       setMessage("Signup successful. Redirecting to login...");
-      setTimeout(() => navigate("/login"), 1500);
-    } catch (error) {
+      setTimeout(() => navigate("/login"), 1000);
+    } catch (err) {
       setMessage(
-        error.response?.data?.error ||
-        error.response?.data?.detail ||
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
         "Signup failed"
       );
     } finally {
@@ -64,71 +60,78 @@ function Signup() {
       <div className={styles.card}>
         <h2>Sign Up</h2>
 
-        {/* Username */}
-        <div className={styles.field}>
-          <label>Username</label>
-          <div className={styles.inputRow}>
-            <FaUser className={styles.icon} />
-            <input
-              type="text"
-              name="username"
-              placeholder="Type your username"
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        {/* Email (optional, not sent) */}
-        <div className={styles.field}>
-          <label>Email</label>
-          <div className={styles.inputRow}>
-            <FaEnvelope className={styles.icon} />
-            <input
-              type="email"
-              name="email"
-              placeholder="Type your email"
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        {/* Password */}
-        <div className={styles.field}>
-          <label>Password</label>
-          <div className={styles.inputRow}>
-            <FaLock className={styles.icon} />
-            <input
-              type="password"
-              name="password"
-              placeholder="Type your password"
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        {/* Confirm Password */}
-        <div className={styles.field}>
-          <label>Confirm Password</label>
-          <div className={styles.inputRow}>
-            <FaLock className={styles.icon} />
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm your password"
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        {message && <p className={styles.message}>{message}</p>}
-
-        <button
-          className={styles.btn}
-          onClick={handleSignup}
-          disabled={loading}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSignup();
+          }}
         >
-          {loading ? "Creating..." : "SIGN UP"}
-        </button>
+          {/* Username */}
+          <div className={styles.field}>
+            <label>Username</label>
+            <div className={styles.inputRow}>
+              <FaUser className={styles.icon} />
+              <input
+                type="text"
+                name="username"
+                placeholder="Enter your username"
+                value={form.username}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Email */}
+          <div className={styles.field}>
+            <label>Email</label>
+            <div className={styles.inputRow}>
+              <FaEnvelope className={styles.icon} />
+              <input
+                type="email"
+                name="email"
+                placeholder="Enter your email address"
+                value={form.email}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className={styles.field}>
+            <label>Password</label>
+            <div className={styles.inputRow}>
+              <FaLock className={styles.icon} />
+              <input
+                type="password"
+                name="password"
+                placeholder="Create a password"
+                value={form.password}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Confirm Password */}
+          <div className={styles.field}>
+            <label>Confirm Password</label>
+            <div className={styles.inputRow}>
+              <FaLock className={styles.icon} />
+              <input
+                type="password"
+                name="confirmPassword"
+                placeholder="Re-enter your password"
+                value={form.confirmPassword}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {message && <p className={styles.message}>{message}</p>}
+
+          <button type="submit" className={styles.btn} disabled={loading}>
+            {loading ? "Creating..." : "SIGN UP"}
+          </button>
+        </form>
 
         <p className={styles.footer}>
           Already have an account? <Link to="/login">Login</Link>
@@ -137,5 +140,3 @@ function Signup() {
     </div>
   );
 }
-
-export default Signup;

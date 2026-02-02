@@ -8,12 +8,22 @@ import ProductRecommendations from "../components/overview/ProductRecommendation
 
 export default function Overview() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     getOverviewData()
-      .then((res) => setData(res.data))
-      .catch((err) => console.error(err));
+      .then((res) => {
+        setData(res.data);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("No financial data found. Please upload documents.");
+      });
   }, []);
+
+  if (error) {
+    return <p className="text-red-600">{error}</p>;
+  }
 
   if (!data) {
     return <p className="text-slate-600">Loading analysis...</p>;
@@ -31,15 +41,15 @@ export default function Overview() {
       </div>
 
       <HealthSummaryCard
-        score={data.health_score}
-        riskLevel={data.risk_level}
+        score={data.health_score ?? 0}
+        riskLevel={data.risk_level ?? "UNKNOWN"}
       />
 
-      <RiskAlerts riskFlags={data.risk_flags} />
+      <RiskAlerts riskFlags={data.risk_flags ?? []} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        <ActionableInsights insights={data.actionable_insights} />
-        <ProductRecommendations products={data.product_recommendations} />
+        <ActionableInsights insights={data.actionable_insights ?? []} />
+        <ProductRecommendations products={data.product_recommendations ?? []} />
       </div>
     </div>
   );
