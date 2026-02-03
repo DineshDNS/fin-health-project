@@ -1,13 +1,9 @@
 from pathlib import Path
-import os
-from dotenv import load_dotenv
-load_dotenv()
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / ".env")
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 """
 Django settings for core project.
@@ -31,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-p$bhge^stih%u05a*#0t7vl_-^nx#f+#bdqd(@z+@f!nsnwxa+'
+SECRET_KEY = 'django-insecure-tl%oi+j%ey*(6bxq$t+&b$=tf(hzrv@)bh1oka8+)m=10@!7jz'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -51,14 +47,14 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'corsheaders',
-    "rest_framework.authtoken",
 
-    'users',
-    "ingestion.apps.IngestionConfig", 
+    'documents',
+    'aggregation',
+    'scoring',
+    'api',
+
+
 ]
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -70,7 +66,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
 CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'core.urls'
@@ -98,8 +93,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'Fin_Health_Tool',
+        'USER': 'postgres',
+        'PASSWORD': '667254',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -140,25 +139,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-
-from datetime import timedelta
-
-from datetime import timedelta
-
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
-    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
 }
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "AUTH_HEADER_TYPES": ("Bearer",),
-}
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
