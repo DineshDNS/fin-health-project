@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'aggregation',
     'scoring',
     'api',
+    'analysis',
 
 
 ]

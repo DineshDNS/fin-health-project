@@ -2,14 +2,8 @@ from django.db import models
 
 
 def document_upload_path(instance, filename):
-    """
-    Store files by document type:
-    media/documents/bank/
-    media/documents/gst/
-    media/documents/fin/
-    """
-    doc_type = instance.document_type.lower()
-    return f"documents/{doc_type}/{filename}"
+    # Required for old migrations — DO NOT DELETE
+    return f"documents/{filename}"
 
 
 class Document(models.Model):
@@ -32,4 +26,4 @@ class Document(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.document_type} ({self.file_format})"
+        return f"{self.document_type} | {self.file.name}"

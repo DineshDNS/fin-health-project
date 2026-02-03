@@ -1,4 +1,7 @@
 import pandas as pd
+import traceback
+
+from django.db import transaction
 
 from documents.models import Document
 from documents.validators import validate_file_format
@@ -9,100 +12,121 @@ from parsers.bank_parser import parse_bank_dataframe
 from parsers.gst_parser import parse_gst_dataframe
 from parsers.financial_parser import parse_financial_dataframe
 
-from aggregation.services import get_cumulative_state
-from aggregation.bank_aggregator import merge_bank
-from aggregation.gst_aggregator import merge_gst
-from scoring.services import compute_financial_health_score
+from analysis.models import DocumentAnalysis
+from scoring.services import compute_financial_health_score, determine_risk_level
 
 
 def handle_document_upload(uploaded_file):
     """
-    Full upload pipeline:
+    Upload pipeline (per-document analysis):
     1. Validate file format
     2. Extract structured data
     3. Detect document type
     4. Save document
     5. Parse document
-    6. Merge into cumulative state
-    7. Recompute global score
+    6. Compute score
+    7. Persist DocumentAnalysis (CRITICAL)
     """
 
-    # 1️⃣ Validate file format
+    # 1️⃣ Validate format
     file_format = validate_file_format(uploaded_file)
-
-    # Always reset pointer before reading
     uploaded_file.seek(0)
 
-    df = None
-    columns = []
-    sample_values = []
-
-    # 2️⃣ Extract structured data
+    # 2️⃣ Load dataframe
     if file_format == "CSV":
         df = pd.read_csv(uploaded_file)
-        columns = list(df.columns)
-        sample_values = df.iloc[:5, 0].dropna().tolist()
 
     elif file_format == "XLSX":
         df = pd.read_excel(uploaded_file)
-        columns = list(df.columns)
-        sample_values = df.iloc[:5, 0].dropna().tolist()
 
     elif file_format == "PDF":
         df = extract_pdf_to_dataframe(uploaded_file)
-
         if df is None or df.empty:
-            raise ValueError(
-                "Unable to extract structured data from PDF. "
-                "Please upload a valid Bank, GST, or Financial document."
-            )
-
-        columns = list(df.columns)
-        sample_values = df.iloc[:5, 0].dropna().tolist()
+            raise ValueError("Unable to extract structured data from PDF")
 
     else:
-        raise ValueError("Unsupported file format.")
+        raise ValueError("Unsupported file format")
 
-    # 3️⃣ Detect document type (BANK / GST / FIN)
+    columns = list(df.columns)
+    sample_values = df.iloc[:5, 0].dropna().tolist()
+
+    # 3️⃣ Detect document type
     document_type, confidence_scores = detect_document_type(
         columns,
         sample_values
     )
 
-    # 4️⃣ Save document (ONLY after successful detection)
+    # 4️⃣ Save document
     document = Document.objects.create(
         file=uploaded_file,
         file_format=file_format,
-        document_type=document_type
+        document_type=document_type,
     )
 
-    # 5️⃣ Load cumulative state (single-user system)
-    state = get_cumulative_state()
-
-    # 6️⃣ Parse + merge based on document type
+    # 5️⃣ Parse document
     if document_type == "BANK":
-        if df is not None and not df.empty:
-            parsed_data = parse_bank_dataframe(df)
-            merge_bank(state, parsed_data)
+        parsed = parse_bank_dataframe(df)
 
     elif document_type == "GST":
-        if df is not None and not df.empty:
-            parsed_data = parse_gst_dataframe(df)
-            merge_gst(state, parsed_data)
+        parsed = parse_gst_dataframe(df)
 
     elif document_type == "FIN":
-        if df is not None and not df.empty:
-            parsed_data = parse_financial_dataframe(df)
-            # merge_financial(state, parsed_data)  # future hook
+        parsed = parse_financial_dataframe(df)
 
-    # 7️⃣ Recompute global financial health score
-    state.financial_health_score = compute_financial_health_score(state)
-    state.save()
+    else:
+        raise ValueError("Unknown document type")
+
+    # 6️⃣ Compute score (per document)
+    score = compute_financial_health_score(parsed, document_type)
+    risk_level = determine_risk_level(score)
+
+    # 7️⃣ Persist analysis (THIS WAS MISSING EARLIER)
+    try:
+        with transaction.atomic():
+
+            if document_type == "BANK":
+                DocumentAnalysis.objects.create(
+                    document=document,
+                    document_type="BANK",
+                    total_credits=parsed.get("total_credits", 0),
+                    total_debits=parsed.get("total_debits", 0),
+                    net_cash_flow=parsed.get("net_cash_flow", 0),
+                    expense_ratio=parsed.get("expense_ratio", 0),
+                    cashflow_volatile=parsed.get("cashflow_volatile", False),
+                    financial_health_score=score,
+                    risk_level=risk_level,
+                )
+
+            elif document_type == "GST":
+                DocumentAnalysis.objects.create(
+                    document=document,
+                    document_type="GST",
+                    taxable_value=parsed.get("taxable_value", 0),
+                    gst_paid=parsed.get("gst_paid", 0),
+                    expected_gst=parsed.get("expected_gst", 0),
+                    compliance_gap=parsed.get("compliance_gap", 0),
+                    is_compliant=parsed.get("is_compliant", True),
+                    financial_health_score=score,
+                    risk_level=risk_level,
+                )
+
+            elif document_type == "FIN":
+                DocumentAnalysis.objects.create(
+                    document=document,
+                    document_type="FIN",
+                    financial_health_score=score,
+                    risk_level=risk_level,
+                )
+
+    except Exception:
+        print("❌ ERROR: Failed to create DocumentAnalysis")
+        traceback.print_exc()
+        raise
 
     # 8️⃣ Final response
     return {
         "document_id": document.id,
-        "file_format": file_format,
         "document_type": document_type,
+        "file_format": file_format,
         "confidence_scores": confidence_scores,
     }
