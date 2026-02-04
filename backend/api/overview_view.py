@@ -12,7 +12,7 @@ class OverviewView(APIView):
         insights = []
         score = 100
 
-        # Latest analyses
+        # ---------------- FETCH LATEST ANALYSES ----------------
         bank = (
             DocumentAnalysis.objects
             .filter(document_type="BANK")
@@ -51,14 +51,16 @@ class OverviewView(APIView):
                 score -= 10
                 alerts.append("Cash flow volatility detected")
 
-        if gst and gst.compliance_gap > 0:
-            score -= 20
-            alerts.append("GST compliance gap detected")
-            insights.append(
-                "Set aside GST collections separately to avoid compliance gaps."
-            )
+        if gst:
+            if gst.compliance_gap > 0:
+                score -= 20
+                alerts.append("GST compliance gap detected")
+                insights.append(
+                    "Ensure GST collections are set aside and filed on time."
+                )
 
         if fin:
+            # FIN is a summary layer – light penalty only
             score -= 5
 
         score = max(score, 0)
@@ -70,20 +72,27 @@ class OverviewView(APIView):
         else:
             risk_level = "HIGH"
 
-        # ---------------- ML PREDICTION ----------------
-        ml_prediction = None
+        # ---------------- ML ENGINE (BANK + GST + FIN) ----------------
+        ml_result = None
         try:
             model = load_model()
-            if bank:
-                ml_prediction = predict_creditworthiness(model, bank)
+            if model:
+                ml_result = predict_creditworthiness(
+                    model,
+                    bank=bank,
+                    gst=gst,
+                    fin=fin
+                )
         except Exception:
-            ml_prediction = None  # ML must NEVER break API
+            # ML must never break the API
+            ml_result = None
 
+        # ---------------- RESPONSE ----------------
         return Response({
             "financial_health_score": score,
             "risk_level": risk_level,
             "risk_alerts": list(set(alerts)),
             "actionable_insights": list(set(insights)),
             "product_recommendations": [],
-            "ml_prediction": ml_prediction
+            "ml_assessment": ml_result,
         })

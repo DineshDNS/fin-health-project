@@ -1,13 +1,18 @@
-from .features import extract_features
+import pandas as pd
+from ml.features import extract_features
 
+def predict_creditworthiness(model, bank=None, gst=None, fin=None):
+    features = extract_features(bank=bank, gst=gst, fin=fin)
 
-def predict_creditworthiness(model, analysis):
-    features = extract_features(analysis)
-    X = [list(features.values())]
-
-    probability = model.predict_proba(X)[0][1]
+    X = pd.DataFrame([features])
+    prob = model.predict_proba(X)[0][1]
 
     return {
-        "approval_probability": round(float(probability), 2),
-        "ml_risk_level": "LOW" if probability >= 0.7 else "HIGH"
+        "ml_credit_score": round(prob * 100, 2),
+        "ml_risk_level": (
+            "LOW" if prob >= 0.7 else
+            "MODERATE" if prob >= 0.4 else
+            "HIGH"
+        ),
+        "confidence": round(prob, 3)
     }

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'scoring',
     'api',
     'analysis',
+    'ml_tracking',
 
 
 ]
