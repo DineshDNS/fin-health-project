@@ -62,29 +62,37 @@ def handle_document_upload(uploaded_file):
         "document_type": document_type,
     }
 
+    # ---------------- BANK ----------------
     if document_type == "BANK":
         parsed = parse_bank_dataframe(df)
         analysis_data.update({
-            "total_credits": parsed["total_credits"],
-            "total_debits": parsed["total_debits"],
-            "net_cash_flow": parsed["net_cash_flow"],
-            "expense_ratio": parsed["expense_ratio"],
-            "cashflow_volatile": parsed["cashflow_volatile"],
+            "total_credits": parsed.get("total_credits"),
+            "total_debits": parsed.get("total_debits"),
+            "net_cash_flow": parsed.get("net_cash_flow"),
+            "expense_ratio": parsed.get("expense_ratio"),
+            "cashflow_volatile": parsed.get("cashflow_volatile"),
         })
 
+    # ---------------- GST ----------------
     elif document_type == "GST":
         parsed = parse_gst_dataframe(df)
         analysis_data.update({
-            "taxable_value": parsed["taxable_value"],
-            "gst_paid": parsed["gst_paid"],
-            "expected_gst": parsed["expected_gst"],
-            "compliance_gap": parsed["compliance_gap"],
-            "is_compliant": parsed["is_compliant"],
+            "taxable_value": parsed.get("taxable_value"),
+            "gst_paid": parsed.get("gst_paid"),
+            "expected_gst": parsed.get("expected_gst"),
+            "compliance_gap": parsed.get("compliance_gap"),
+            "is_compliant": parsed.get("is_compliant"),
         })
 
+    # ---------------- FIN ----------------
     elif document_type == "FIN":
         parsed = parse_financial_dataframe(df)
-        # Placeholder – extend later
+        analysis_data.update({
+            "total_assets": parsed.get("total_assets"),
+            "total_liabilities": parsed.get("total_liabilities"),
+            "savings_ratio": parsed.get("savings_ratio"),
+            "current_ratio": parsed.get("current_ratio"),
+        })
 
     # 6️⃣ Compute score + risk
     score = compute_financial_health_score(

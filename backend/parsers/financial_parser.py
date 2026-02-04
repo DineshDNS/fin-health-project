@@ -1,17 +1,30 @@
-def parse_financial_dataframe(df):
+import pandas as pd
+
+
+def parse_financial_dataframe(df: pd.DataFrame):
     """
-    Parse financial statement ONLY if a valid DataFrame is provided.
+    Safely parse FIN CSV.
+    Expected columns:
+    metric,value,year,source
     """
-    if df is None or df.empty:
-        return {
-            "financial_total": 0.0
-        }
 
-    # Common pattern: account | amount
-    amount_column = df.columns[-1]
+    # Normalize column names
+    df.columns = [c.strip().lower() for c in df.columns]
 
-    total_amount = df[amount_column].sum()
+    # Validate structure
+    if "metric" not in df.columns or "value" not in df.columns:
+        raise ValueError("FIN file must contain metric and value columns")
 
-    return {
-        "financial_total": float(total_amount)
-    }
+    financials = {}
+
+    for _, row in df.iterrows():
+        metric = str(row["metric"]).strip().lower()
+        value = row["value"]
+
+        try:
+            financials[metric] = float(value)
+        except (ValueError, TypeError):
+            # Ignore non-numeric safely
+            continue
+
+    return financials
