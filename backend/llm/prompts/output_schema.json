@@ -1,0 +1,22 @@
+{
+  "executive_summary": "string",
+  "risk_explanation": {
+    "overall_risk": "LOW | MODERATE | HIGH",
+    "explanation": "string"
+  },
+  "key_concerns": [
+    {
+      "area": "Cash Flow | Expenses | GST | Financial Stability | Creditworthiness",
+      "description": "string"
+    }
+  ],
+  "action_plan": [
+    {
+      "priority": "HIGH | MEDIUM | LOW",
+      "recommendation": "string",
+      "expected_outcome": "string",
+      "timeframe": "IMMEDIATE | 30_DAYS | 90_DAYS"
+    }
+  ],
+  "confidence_note": "string"
+}

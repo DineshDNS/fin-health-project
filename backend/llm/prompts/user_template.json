@@ -1,0 +1,37 @@
+{
+  "business_context": {
+    "business_type": "{{business_type}}",
+    "industry": "{{industry}}",
+    "region": "{{region}}",
+    "language": "{{language}}"
+  },
+  "financial_summary": {
+    "financial_health_score": "{{financial_health_score}}",
+    "risk_level": "{{risk_level}}"
+  },
+  "bank_signals": {
+    "cashflow_status": "{{cashflow_status}}",
+    "expense_level": "{{expense_level}}",
+    "volatility": "{{volatility}}"
+  },
+  "gst_signals": {
+    "compliance_status": "{{compliance_status}}",
+    "severity": "{{gst_severity}}"
+  },
+  "financial_signals": {
+    "liquidity_status": "{{liquidity_status}}",
+    "savings_status": "{{savings_status}}"
+  },
+  "ml_assessment": {
+    "risk_level": "{{ml_risk_level}}",
+    "confidence_bucket": "{{confidence_bucket}}"
+  },
+  "recommendations":[
+  {
+    "category": "CASHFLOW_IMPROVEMENT",
+    "priority": "HIGH",
+    "action": "Reduce expenses",
+    "expected_impact": "Improves liquidity"
+  }
+]
+}
