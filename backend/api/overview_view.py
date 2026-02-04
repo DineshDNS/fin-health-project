@@ -6,8 +6,20 @@ from ml.model import load_model
 from ml.predictor import predict_creditworthiness
 
 from recommendations.engine import generate_recommendations
+from products.mapper import map_recommendations_to_products
 
-# OPTIONAL LLM (safe abstraction)
+from api.ui_helpers import (
+    risk_ui_summary,
+    decorate_recommendation_ui,
+    decorate_product_ui,
+)
+
+from api.decision_helpers import (
+    detect_key_concerns,
+    should_offer_financing,
+    build_action_plan,
+)
+
 from llm.factory import get_llm_client, safe_generate_narrative
 
 
@@ -18,9 +30,9 @@ class OverviewView(APIView):
         insights = []
         score = 100
 
-        # -------------------------------
+        # --------------------------------------------------
         # Fetch latest analyses
-        # -------------------------------
+        # --------------------------------------------------
         bank = (
             DocumentAnalysis.objects
             .filter(document_type="BANK")
@@ -42,9 +54,9 @@ class OverviewView(APIView):
             .first()
         )
 
-        # -------------------------------
-        # Rule-based financial score
-        # -------------------------------
+        # --------------------------------------------------
+        # Rule-based financial scoring
+        # --------------------------------------------------
         if bank:
             if bank.net_cash_flow < 0:
                 score -= 25
@@ -80,20 +92,20 @@ class OverviewView(APIView):
         else:
             risk_level = "HIGH"
 
-        # -------------------------------
-        # ML assessment
-        # -------------------------------
+        # --------------------------------------------------
+        # ML assessment (never breaks API)
+        # --------------------------------------------------
         ml_result = None
         try:
             if bank:
                 model = load_model()
                 ml_result = predict_creditworthiness(model, bank)
         except Exception:
-            ml_result = None  # ML must never break API
+            ml_result = None
 
-        # -------------------------------
-        # Phase 8: Recommendation Engine
-        # -------------------------------
+        # --------------------------------------------------
+        # Recommendations
+        # --------------------------------------------------
         recommendation_payload = generate_recommendations(
             bank=bank,
             gst=gst,
@@ -101,89 +113,102 @@ class OverviewView(APIView):
             ml_result=ml_result
         )
 
-        # -------------------------------
-        # OPTIONAL: LLM Narrative Layer
-        # -------------------------------
+        recommendations = [
+            decorate_recommendation_ui(r)
+            for r in recommendation_payload["recommendations"]
+        ]
+
+        # --------------------------------------------------
+        # Key concerns detection
+        # --------------------------------------------------
+        key_concerns = detect_key_concerns(
+            bank=bank,
+            gst=gst,
+            fin=fin,
+            ml_result=ml_result,
+        )
+
+        # --------------------------------------------------
+        # Financing decision + product mapping
+        # --------------------------------------------------
+        gst_compliant = (
+            gst is not None and
+            gst.compliance_gap is not None and
+            gst.compliance_gap <= 0
+        )
+
+        offer_financing = should_offer_financing(
+            recommendations=recommendation_payload["recommendations"],
+            risk_level=risk_level,
+        )
+
+        eligible_products = []
+        product_state = {
+            "status": "NOT_REQUIRED",
+            "message": "Your business does not require financing products at this time."
+        }
+
+        if offer_financing:
+            eligible_products_raw = map_recommendations_to_products(
+                recommendations=recommendation_payload["recommendations"],
+                risk_level=risk_level,
+                gst_compliant=gst_compliant,
+            )
+
+            eligible_products = [
+                decorate_product_ui(p)
+                for p in eligible_products_raw
+            ]
+
+            product_state = {
+                "status": "AVAILABLE",
+                "message": "Suitable financial products identified based on your profile."
+            }
+
+        # --------------------------------------------------
+        # Action plan (only when recovery is needed)
+        # --------------------------------------------------
+        action_plan = build_action_plan(key_concerns)
+
+        # --------------------------------------------------
+        # UI summary
+        # --------------------------------------------------
+        ui_summary = risk_ui_summary(score, risk_level)
+
+        # --------------------------------------------------
+        # Optional LLM narrative (safe fallback)
+        # --------------------------------------------------
         narrative = None
         try:
             llm = get_llm_client()
-
-            llm_input = {
-                "business_context": {
-                    "business_type": "SME",
-                    "industry": "General",
-                    "region": "India",
-                    "language": "en"
-                },
-                "financial_summary": {
-                    "financial_health_score": score,
-                    "risk_level": risk_level
-                },
-                "bank_signals": {
-                    "cashflow_status": (
-                        "NEGATIVE" if bank and bank.net_cash_flow < 0 else
-                        "BREAKEVEN" if bank and bank.net_cash_flow == 0 else
-                        "POSITIVE"
-                    ),
-                    "expense_level": (
-                        "HIGH" if bank and bank.expense_ratio > 0.8 else
-                        "MODERATE"
-                    ),
-                    "volatility": (
-                        "UNSTABLE" if bank and bank.cashflow_volatile else
-                        "STABLE"
-                    )
-                },
-                "gst_signals": {
-                    "compliance_status": (
-                        "NON_COMPLIANT" if gst and gst.compliance_gap > 0 else
-                        "COMPLIANT"
-                    ),
-                    "severity": (
-                        "HIGH" if gst and gst.compliance_gap > 0 else
-                        "LOW"
-                    )
-                },
-                "financial_signals": {
-                    "liquidity_status": (
-                        "WEAK" if fin and fin.current_ratio and fin.current_ratio < 1
-                        else "ADEQUATE"
-                    ),
-                    "savings_status": (
-                        "LOW" if fin and fin.savings_ratio and fin.savings_ratio < 0.1
-                        else "GOOD"
-                    )
-                },
-                "ml_assessment": {
-                    "risk_level": (
-                        ml_result["ml_risk_level"] if ml_result else "MODERATE"
-                    ),
-                    "confidence_bucket": (
-                        "HIGH" if ml_result and ml_result["confidence"] > 0.7 else
-                        "MEDIUM" if ml_result and ml_result["confidence"] > 0.4 else
-                        "LOW"
-                    )
-                },
-                "recommendations": recommendation_payload["recommendations"]
-            }
-
             narrative = safe_generate_narrative(
                 llm_client=llm,
-                input_payload=llm_input
+                input_payload={
+                    "financial_health_score": score,
+                    "risk_level": risk_level,
+                    "recommendations": recommendations,
+                    "key_concerns": key_concerns,
+                    "action_plan": action_plan,
+                    "products": eligible_products,
+                }
             )
-
         except Exception:
-            narrative = None  # LLM must NEVER break API
+            narrative = None
 
-        # -------------------------------
+        # --------------------------------------------------
         # Final response
-        # -------------------------------
+        # --------------------------------------------------
         return Response({
             "financial_health_score": score,
             "risk_level": risk_level,
+            "ui_summary": ui_summary,
             "risk_alerts": list(set(alerts)),
             "actionable_insights": list(set(insights)),
-            "recommendations": recommendation_payload["recommendations"],
+            "recommendations": recommendations,
+            "eligible_products": eligible_products,
+            "product_state": product_state,
+            "key_concerns": key_concerns,
+            "action_plan": action_plan,
             "ml_assessment": ml_result,
-            "narrative": narrative,  # None if LLM disabled
+            "narrative": narrative,
         })

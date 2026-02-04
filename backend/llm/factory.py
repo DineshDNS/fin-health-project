@@ -1,94 +1,122 @@
-from django.conf import settings
-from jsonschema import ValidationError
+import os
 
-from llm.mock import MockLLM
-from llm.gpt5 import GPT5LLM
-from llm.claude import ClaudeLLM
+try:
+    from jsonschema import validate, ValidationError
+except ImportError:
+    # Safe fallback if jsonschema is not installed
+    ValidationError = Exception
+    validate = None
+
+
+# --------------------------------------------------
+# Narrative output schema (frontend + audit safe)
+# --------------------------------------------------
+NARRATIVE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "executive_summary": {"type": "string"},
+        "risk_explanation": {
+            "type": "object",
+            "properties": {
+                "overall_risk": {"type": "string"},
+                "explanation": {"type": "string"},
+            },
+            "required": ["overall_risk", "explanation"],
+        },
+        "key_concerns": {"type": "array"},
+        "action_plan": {"type": "array"},
+        "confidence_note": {"type": "string"},
+    },
+    "required": [
+        "executive_summary",
+        "risk_explanation",
+        "key_concerns",
+        "action_plan",
+        "confidence_note",
+    ],
+}
+
+
+# --------------------------------------------------
+# LLM client abstraction
+# --------------------------------------------------
+class BaseLLMClient:
+    def generate(self, prompt: str) -> dict:
+        raise NotImplementedError
+
+
+class MockLLMClient(BaseLLMClient):
+    """
+    Used when no paid LLM is configured.
+    Always triggers fallback narrative.
+    """
+
+    def generate(self, prompt: str) -> dict:
+        raise RuntimeError("LLM not configured")
 
 
 def get_llm_client():
     """
-    Factory method to return the appropriate LLM client
-    based on environment configuration.
-
-    - development → MockLLM (free, deterministic)
-    - staging     → Claude (optional)
-    - production  → GPT-5
+    Factory method.
+    Replace this later with GPT-5 / Claude client.
     """
 
-    env = getattr(settings, "ENVIRONMENT", "development").lower()
+    # Example:
+    # if os.getenv("OPENAI_API_KEY"):
+    #     return OpenAILLMClient()
 
-    if env == "production":
-        return GPT5LLM(
-            client=None,  # OpenAI client injected later
-            system_prompt=_load_system_prompt()
-        )
-
-    if env == "staging":
-        return ClaudeLLM(
-            client=None,  # Anthropic client injected later
-            system_prompt=_load_system_prompt()
-        )
-
-    # Default: development / testing
-    return MockLLM()
+    return MockLLMClient()
 
 
-def safe_generate_narrative(llm_client, input_payload: dict) -> dict:
-    """
-    Safely generate LLM narrative.
-
-    - Enforces schema validation (via base class)
-    - Never allows API crashes
-    - Returns a compliant fallback response on failure
-    """
-
-    try:
-        return llm_client.generate_narrative(
-            input_payload=input_payload
-        )
-
-    except ValidationError:
-        # Schema violation — fallback safely
-        return _fallback_response(input_payload)
-
-    except Exception:
-        # Any unexpected LLM/provider failure
-        return _fallback_response(input_payload)
-
-
-def _fallback_response(input_payload: dict) -> dict:
-    """
-    Guaranteed-safe fallback response.
-    Always schema-compliant.
-    """
-
-    risk_level = input_payload.get("financial_summary", {}).get(
-        "risk_level", "MODERATE"
-    )
+# --------------------------------------------------
+# Fallback narrative (CRITICAL FIX)
+# --------------------------------------------------
+def fallback_narrative(input_payload: dict) -> dict:
+    risk_level = input_payload.get("risk_level", "MODERATE")
 
     return {
         "executive_summary": (
-            "We are unable to generate detailed insights at the moment."
+            "Your business is financially stable with no critical risks detected."
+            if risk_level == "LOW"
+            else "Your business shows financial risk indicators that require attention."
         ),
         "risk_explanation": {
             "overall_risk": risk_level,
             "explanation": (
-                "Please review the financial indicators and recommendations provided."
-            )
+                "The assessment is based on financial health score, cash flow stability, "
+                "compliance indicators, and ML-based credit evaluation."
+            ),
         },
-        "key_concerns": [],
-        "action_plan": [],
-        "confidence_note": (
-            "This is a temporary fallback response."
-        )
+        "key_concerns": input_payload.get("key_concerns", []),
+        "action_plan": input_payload.get("action_plan", []),
+        "confidence_note": "AI-generated narrative is temporarily unavailable.",
     }
 
 
-def _load_system_prompt() -> str:
+# --------------------------------------------------
+# Safe narrative generation wrapper
+# --------------------------------------------------
+def safe_generate_narrative(llm_client: BaseLLMClient, input_payload: dict) -> dict:
     """
-    Load system prompt from file.
-    Kept isolated for auditability.
+    Attempts LLM generation.
+    Falls back deterministically on ANY failure.
     """
-    with open("llm/prompts/system.txt", "r", encoding="utf-8") as f:
-        return f.read()
+
+    try:
+        prompt = (
+            "Generate a clear, professional financial narrative based on:\n"
+            f"{input_payload}\n"
+            "Return structured JSON only."
+        )
+
+        output = llm_client.generate(prompt)
+
+        # Validate schema if jsonschema is available
+        if validate:
+            validate(instance=output, schema=NARRATIVE_SCHEMA)
+
+        return output
+
+    except Exception:
+        # NEVER let narrative break API
+        return fallback_narrative(input_payload)
