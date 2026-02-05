@@ -1,15 +1,13 @@
-from pydantic import BaseModel, confloat
 from typing import List, Optional
+from pydantic import BaseModel
+from core.dto.enums import Severity, UISeverity
 
-from .enums import RiskLevel, PriorityLevel
-from .ui import UIDecoration
 
-
-# =========================
+# ---------------------------------
 # Business Context
-# =========================
+# ---------------------------------
 
-class DataAvailability(BaseModel):
+class DataAvailabilityDTO(BaseModel):
     bank: bool
     gst: bool
     financials: bool
@@ -18,106 +16,102 @@ class DataAvailability(BaseModel):
 class BusinessContextDTO(BaseModel):
     business_id: int
     industry: str
-    data_availability: DataAvailability
+    data_availability: DataAvailabilityDTO
     last_updated: str
 
 
-# =========================
+# ---------------------------------
 # Health Summary
-# =========================
+# ---------------------------------
+
+class HealthSummaryUIDTO(BaseModel):
+    severity: UISeverity
+
 
 class HealthSummaryDTO(BaseModel):
     financial_health_score: int
-    health_label: str        # STRONG | MODERATE | WEAK
-    credit_readiness: str    # HIGH | MEDIUM | LOW
-    ui: UIDecoration
+    health_label: str
+    credit_readiness: str
+    ui: HealthSummaryUIDTO
 
 
-# =========================
+# ---------------------------------
 # Risk Summary
-# =========================
+# ---------------------------------
 
-class RiskItemDTO(BaseModel):
-    type: str
-    severity: RiskLevel
-    message: str
+class RiskSummaryUIDTO(BaseModel):
+    severity: UISeverity
 
 
 class RiskSummaryDTO(BaseModel):
-    overall_risk_level: RiskLevel
-    key_risks: List[RiskItemDTO]
+    overall_risk_level: Severity
+    risk_band: Severity
+    confidence: float
+    ui: RiskSummaryUIDTO
 
 
-# =========================
-# Recommendations
-# =========================
+# ---------------------------------
+# Key Insights (FINAL)
+# ---------------------------------
 
-class RecommendationDTO(BaseModel):
-    id: str
-    category: str
-    priority: PriorityLevel
-    trigger: str
-    action: str
+class KeyInsightUIDTO(BaseModel):
+    badge: str
+    severity: UISeverity
+
+
+class TopRiskInsightDTO(BaseModel):
+    title: str
+    severity: Severity
+    summary: str
+    why_it_matters: str
+    ui: KeyInsightUIDTO
+
+
+class RecommendedActionInsightDTO(BaseModel):
+    title: str
+    priority: Severity
+    summary: str
     expected_impact: str
-    confidence: PriorityLevel
-    ui: UIDecoration
+    ui: KeyInsightUIDTO
 
 
-# =========================
-# Product Matching
-# =========================
-
-class ProductMatchDTO(BaseModel):
-    product_id: str
-    provider: str
-    product_type: str
-    linked_recommendation_id: Optional[str]
-    eligibility_score: float
-    eligibility_label: str
-    ui: UIDecoration
+class KeyInsightsDTO(BaseModel):
+    top_risk: TopRiskInsightDTO
+    recommended_action: RecommendedActionInsightDTO
 
 
-# =========================
-# Action Plan
-# =========================
+# ---------------------------------
+# Immediate Attention Summary
+# ---------------------------------
 
-class ActionPlanDTO(BaseModel):
-    step: int
-    action: str
+class AttentionSummaryUIDTO(BaseModel):
+    severity: UISeverity
+
+
+class AttentionSummaryDTO(BaseModel):
+    title: str
+    issue: str
+    severity: Severity
     timeframe: str
-    expected_outcome: str
+    impact: str
+    ui: AttentionSummaryUIDTO
 
 
-# =========================
-# ML Summary (STRICT)
-# =========================
+# ---------------------------------
+# FINAL Overview Response DTO
+# ---------------------------------
 
-class MLSummaryDTO(BaseModel):
-    risk_band: RiskLevel
-    confidence: confloat(ge=0.0, le=1.0)
-    note: str
-
-
-# =========================
-# Narrative
-# =========================
-
-class NarrativeDTO(BaseModel):
-    executive_summary: str
-    explanation: str
-    confidence_note: str
-
-
-# =========================
-# Final Overview DTO
-# =========================
-
-class OverviewDTO(BaseModel):
+class OverviewDataDTO(BaseModel):
     business_context: BusinessContextDTO
     health_summary: HealthSummaryDTO
     risk_summary: RiskSummaryDTO
-    recommendations: List[RecommendationDTO]
-    products: List[ProductMatchDTO]
-    action_plan: List[ActionPlanDTO]
-    ml_summary: MLSummaryDTO
-    narrative: NarrativeDTO
+    key_insights: KeyInsightsDTO
+    attention_summary: AttentionSummaryDTO
+
+
+class OverviewResponseDTO(BaseModel):
+    request_id: str
+    status: str
+    data: OverviewDataDTO
+    warnings: List[str] = []
+    errors: List[str] = []

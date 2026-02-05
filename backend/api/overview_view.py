@@ -1,13 +1,12 @@
 import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny  # TEMP for frontend dev
 
 from analysis.models import DocumentAnalysis
-
 from core.services.overview_assembler import build_overview_dto
 
-# ---- EXISTING HELPERS (UNCHANGED) ----
+# ---- ML & ENGINES ----
 from ml.model import load_model
 from ml.predictor import predict_creditworthiness
 
@@ -15,7 +14,6 @@ from recommendations.engine import generate_recommendations
 from products.mapper import map_recommendations_to_products
 
 from api.ui_helpers import (
-    risk_ui_summary,
     decorate_recommendation_ui,
     decorate_product_ui,
 )
@@ -30,16 +28,18 @@ from llm.factory import get_llm_client, safe_generate_narrative
 
 
 class OverviewView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    GET /api/overview/
+    UX-FROZEN ENDPOINT
+    """
+
+    # 🔧 TEMP: switch back to IsAuthenticated after frontend auth
+    permission_classes = [AllowAny]
 
     def get(self, request):
-        """
-        GET /api/overview/
-        FROZEN UX CONTRACT
-        """
 
         # --------------------------------------------------
-        # 1. Fetch latest analyses (SOURCE DATA)
+        # 1. Fetch latest analyses
         # --------------------------------------------------
         bank = DocumentAnalysis.objects.filter(
             document_type="BANK"
@@ -62,32 +62,22 @@ class OverviewView(APIView):
             analysis["financial_analysis"] = fin.__dict__
 
         # --------------------------------------------------
-        # 2. EXISTING BUSINESS LOGIC (UNCHANGED)
-        #    This builds `overview_logic`
+        # 2. Rule-based scoring
         # --------------------------------------------------
         score = 100
-        alerts = []
-        insights = []
 
         if bank:
             if bank.net_cash_flow < 0:
                 score -= 25
-                alerts.append("Negative net cash flow detected")
-                insights.append(
-                    "Improve cash inflow timing and reduce delayed receivables."
-                )
 
             if bank.expense_ratio and bank.expense_ratio > 0.8:
                 score -= 20
-                alerts.append("High expense ratio")
 
             if bank.cashflow_volatile:
                 score -= 10
-                alerts.append("Cash flow volatility detected")
 
         if gst and gst.compliance_gap and gst.compliance_gap > 0:
             score -= 20
-            alerts.append("GST compliance gap detected")
 
         score = max(score, 0)
 
@@ -98,16 +88,35 @@ class OverviewView(APIView):
         else:
             risk_level = "HIGH"
 
-        # ---- ML (safe) ----
-        ml_result = None
+        # --------------------------------------------------
+        # 3. ML Assessment (NORMALIZED — NEVER FAILS)
+        # --------------------------------------------------
         try:
             if bank:
                 model = load_model()
-                ml_result = predict_creditworthiness(model, bank)
-        except Exception:
-            ml_result = {"ml_risk_level": risk_level, "confidence": 0.0}
+                raw_ml = predict_creditworthiness(model, bank)
 
-        # ---- Recommendations ----
+                if isinstance(raw_ml, dict):
+                    ml_result = {
+                        "ml_risk_level": raw_ml.get("ml_risk_level", risk_level),
+                        "confidence": float(raw_ml.get("confidence", 0.0)),
+                    }
+                else:
+                    ml_result = {
+                        "ml_risk_level": risk_level,
+                        "confidence": 0.0,
+                    }
+            else:
+                raise ValueError("No bank data")
+        except Exception:
+            ml_result = {
+                "ml_risk_level": risk_level,
+                "confidence": 0.0,
+            }
+
+        # --------------------------------------------------
+        # 4. Recommendations
+        # --------------------------------------------------
         recommendation_payload = generate_recommendations(
             bank=bank,
             gst=gst,
@@ -120,7 +129,9 @@ class OverviewView(APIView):
             for r in recommendation_payload["recommendations"]
         ]
 
-        # ---- Key concerns ----
+        # --------------------------------------------------
+        # 5. Key concerns & products
+        # --------------------------------------------------
         key_concerns = detect_key_concerns(
             bank=bank,
             gst=gst,
@@ -128,7 +139,6 @@ class OverviewView(APIView):
             ml_result=ml_result,
         )
 
-        # ---- Products ----
         offer_financing = should_offer_financing(
             recommendations=recommendation_payload["recommendations"],
             risk_level=risk_level,
@@ -136,21 +146,24 @@ class OverviewView(APIView):
 
         eligible_products = []
         if offer_financing:
-            eligible_products_raw = map_recommendations_to_products(
+            raw_products = map_recommendations_to_products(
                 recommendations=recommendation_payload["recommendations"],
                 risk_level=risk_level,
-                gst_compliant=(gst and gst.compliance_gap <= 0),
+                gst_compliant=bool(gst and gst.compliance_gap <= 0),
             )
             eligible_products = [
                 decorate_product_ui(p)
-                for p in eligible_products_raw
+                for p in raw_products
             ]
 
-        # ---- Action plan ----
+        # --------------------------------------------------
+        # 6. Action plan
+        # --------------------------------------------------
         action_plan = build_action_plan(key_concerns)
 
-        # ---- Narrative (optional) ----
-        narrative = None
+        # --------------------------------------------------
+        # 7. Narrative (safe fallback)
+        # --------------------------------------------------
         try:
             llm = get_llm_client()
             narrative = safe_generate_narrative(
@@ -174,7 +187,7 @@ class OverviewView(APIView):
             }
 
         # --------------------------------------------------
-        # 3. Build overview_logic (DTO INPUT)
+        # 8. Overview logic (DTO input)
         # --------------------------------------------------
         overview_logic = {
             "financial_health_score": score,
@@ -190,17 +203,17 @@ class OverviewView(APIView):
         }
 
         # --------------------------------------------------
-        # 4. FINAL ASSEMBLY (AUTHORITATIVE)
+        # 9. Assemble DTO (CRITICAL FIX HERE)
         # --------------------------------------------------
         dto = build_overview_dto(
-            business_id=request.user.id,
+            business_id=request.user.id if request.user and request.user.id else 0,
             industry="Retail",
             analysis=analysis,
             overview_logic=overview_logic,
         )
 
         # --------------------------------------------------
-        # 5. Response (FROZEN CONTRACT)
+        # 10. Response (FROZEN CONTRACT)
         # --------------------------------------------------
         return Response({
             "request_id": str(uuid.uuid4()),
