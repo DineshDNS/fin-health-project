@@ -1,4 +1,5 @@
 import uuid
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny  # TEMP for frontend dev
@@ -33,8 +34,7 @@ class OverviewView(APIView):
     UX-FROZEN ENDPOINT
     """
 
-    # 🔧 TEMP: switch back to IsAuthenticated after frontend auth
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # switch to IsAuthenticated later
 
     def get(self, request):
 
@@ -69,10 +69,8 @@ class OverviewView(APIView):
         if bank:
             if bank.net_cash_flow < 0:
                 score -= 25
-
             if bank.expense_ratio and bank.expense_ratio > 0.8:
                 score -= 20
-
             if bank.cashflow_volatile:
                 score -= 10
 
@@ -89,23 +87,16 @@ class OverviewView(APIView):
             risk_level = "HIGH"
 
         # --------------------------------------------------
-        # 3. ML Assessment (NORMALIZED — NEVER FAILS)
+        # 3. ML Assessment (SAFE)
         # --------------------------------------------------
         try:
             if bank:
                 model = load_model()
                 raw_ml = predict_creditworthiness(model, bank)
-
-                if isinstance(raw_ml, dict):
-                    ml_result = {
-                        "ml_risk_level": raw_ml.get("ml_risk_level", risk_level),
-                        "confidence": float(raw_ml.get("confidence", 0.0)),
-                    }
-                else:
-                    ml_result = {
-                        "ml_risk_level": risk_level,
-                        "confidence": 0.0,
-                    }
+                ml_result = {
+                    "ml_risk_level": raw_ml.get("ml_risk_level", risk_level),
+                    "confidence": float(raw_ml.get("confidence", 0.0)),
+                }
             else:
                 raise ValueError("No bank data")
         except Exception:
@@ -162,7 +153,7 @@ class OverviewView(APIView):
         action_plan = build_action_plan(key_concerns)
 
         # --------------------------------------------------
-        # 7. Narrative (safe fallback)
+        # 7. Narrative
         # --------------------------------------------------
         try:
             llm = get_llm_client()
@@ -187,7 +178,7 @@ class OverviewView(APIView):
             }
 
         # --------------------------------------------------
-        # 8. Overview logic (DTO input)
+        # 8. Overview logic (INPUT TO ASSEMBLER)
         # --------------------------------------------------
         overview_logic = {
             "financial_health_score": score,
@@ -203,7 +194,7 @@ class OverviewView(APIView):
         }
 
         # --------------------------------------------------
-        # 9. Assemble DTO (CRITICAL FIX HERE)
+        # 9. Assemble DTO (SINGLE SOURCE OF TRUTH)
         # --------------------------------------------------
         dto = build_overview_dto(
             business_id=request.user.id if request.user and request.user.id else 0,
@@ -213,12 +204,9 @@ class OverviewView(APIView):
         )
 
         # --------------------------------------------------
-        # 10. Response (FROZEN CONTRACT)
+        # 10. FINAL RESPONSE (NO DOUBLE WRAP)
         # --------------------------------------------------
-        return Response({
-            "request_id": str(uuid.uuid4()),
-            "status": "SUCCESS",
-            "data": dto.model_dump(),
-            "warnings": [],
-            "errors": [],
-        })
+        response = dto.model_dump()
+        response["request_id"] = str(uuid.uuid4())
+
+        return Response(response)

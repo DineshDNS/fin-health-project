@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel
-from core.dto.enums import Severity, UISeverity
+from core.dto.enums import RiskLevel, SeverityLevel, PriorityLevel
 
 
 # ---------------------------------
@@ -17,7 +17,7 @@ class BusinessContextDTO(BaseModel):
     business_id: int
     industry: str
     data_availability: DataAvailabilityDTO
-    last_updated: str
+    last_updated: str | None
 
 
 # ---------------------------------
@@ -25,7 +25,7 @@ class BusinessContextDTO(BaseModel):
 # ---------------------------------
 
 class HealthSummaryUIDTO(BaseModel):
-    severity: UISeverity
+    severity: SeverityLevel
 
 
 class HealthSummaryDTO(BaseModel):
@@ -40,28 +40,28 @@ class HealthSummaryDTO(BaseModel):
 # ---------------------------------
 
 class RiskSummaryUIDTO(BaseModel):
-    severity: UISeverity
+    severity: SeverityLevel
 
 
 class RiskSummaryDTO(BaseModel):
-    overall_risk_level: Severity
-    risk_band: Severity
+    overall_risk_level: RiskLevel
+    risk_band: RiskLevel
     confidence: float
     ui: RiskSummaryUIDTO
 
 
 # ---------------------------------
-# Key Insights (FINAL)
+# Key Insights
 # ---------------------------------
 
 class KeyInsightUIDTO(BaseModel):
     badge: str
-    severity: UISeverity
+    severity: SeverityLevel
 
 
 class TopRiskInsightDTO(BaseModel):
     title: str
-    severity: Severity
+    severity: RiskLevel
     summary: str
     why_it_matters: str
     ui: KeyInsightUIDTO
@@ -69,7 +69,7 @@ class TopRiskInsightDTO(BaseModel):
 
 class RecommendedActionInsightDTO(BaseModel):
     title: str
-    priority: Severity
+    priority: PriorityLevel
     summary: str
     expected_impact: str
     ui: KeyInsightUIDTO
@@ -81,24 +81,24 @@ class KeyInsightsDTO(BaseModel):
 
 
 # ---------------------------------
-# Immediate Attention Summary
+# Attention Summary
 # ---------------------------------
 
 class AttentionSummaryUIDTO(BaseModel):
-    severity: UISeverity
+    severity: SeverityLevel
 
 
 class AttentionSummaryDTO(BaseModel):
     title: str
     issue: str
-    severity: Severity
+    severity: RiskLevel
     timeframe: str
     impact: str
     ui: AttentionSummaryUIDTO
 
 
 # ---------------------------------
-# FINAL Overview Response DTO
+# Final Overview Response
 # ---------------------------------
 
 class OverviewDataDTO(BaseModel):

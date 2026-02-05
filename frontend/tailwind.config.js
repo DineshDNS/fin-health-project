@@ -36,7 +36,7 @@ export default {
           "linear-gradient(180deg, #4e0202 0%, #930d1f 50%, #8b043a 100%)",
 
         "app-gradient":
-          "linear-gradient(135deg, #f78fbf 0%, #f7d0d7 35%, #fcddc6 65%, #f17382 100%)",
+          "linear-gradient(135deg, #f9a6cd 0%, #d8b4bc 35%, #d9bca7 65%, #f39da7 100%)",
       },
 
       /* ---------------------------------

@@ -1,25 +1,11 @@
-import { useEffect, useState } from "react";
-import { fetchOverview } from "../api/overview.api";
+import { useQuery } from "@tanstack/react-query";
+import { fetchOverview } from "../api/overview";
 
-export default function useOverview() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetchOverview();
-        setData(res);
-      } catch (err) {
-        setError("Failed to load overview");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
-  }, []);
-
-  return { data, loading, error };
+export function useOverview() {
+  return useQuery({
+    queryKey: ["overview"],
+    queryFn: fetchOverview,
+    staleTime: 1000 * 60,      // 1 min
+    retry: 1,
+  });
 }
