@@ -1,9 +1,10 @@
 import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny  # TEMP (match overview)
+from rest_framework.permissions import AllowAny
 
 from analysis.models import DocumentAnalysis
+from api.documents.models import Document
 
 from ml.model import load_model
 from ml.predictor import predict_creditworthiness
@@ -13,181 +14,155 @@ from core.dto.enums import RiskLevel
 
 
 class AnalysisView(APIView):
-    """
-    GET /api/analysis/
-
-    Deep analysis endpoint.
-    Backend-first, DTO-only response.
-    """
-
-    permission_classes = [AllowAny]  # switch to IsAuthenticated later
+    permission_classes = [AllowAny]
 
     def get(self, request):
 
-        # --------------------------------------------------
-        # 1. Fetch latest documents
-        # --------------------------------------------------
-        bank = DocumentAnalysis.objects.filter(
-            document_type="BANK"
-        ).order_by("-created_at").first()
+        # ==================================================
+        # 0️⃣ ACTIVE DOCUMENTS
+        # ==================================================
+        active_docs = Document.objects.filter(status="UPLOADED")
 
-        gst = DocumentAnalysis.objects.filter(
-            document_type="GST"
-        ).order_by("-created_at").first()
+        if not active_docs.exists():
+            empty_dto = build_analysis_dto(
+                score=0,
+                risk_level=RiskLevel.INFO,
+                ml_result={"confidence": 0.0, "key_features": [], "model_version": "v1.0"},
+                breakdown={},
+                risks=[],
+                trends={},
+                impact_actions=[],
+            )
 
-        fin = DocumentAnalysis.objects.filter(
-            document_type="FIN"
-        ).order_by("-created_at").first()
+            return Response({
+                "request_id": str(uuid.uuid4()),
+                "status": "SUCCESS",
+                "data": empty_dto.model_dump(),
+                "warnings": [],
+                "errors": [],
+            })
 
-        # --------------------------------------------------
-        # 2. Rule-based scoring (same philosophy as overview)
-        # --------------------------------------------------
-        score = 100
+        # ==================================================
+        # 1️⃣ FETCH LATEST ANALYSIS PER TYPE
+        # ==================================================
+        bank = DocumentAnalysis.objects.filter(document_type="BANK").order_by("-created_at").first()
+        gst = DocumentAnalysis.objects.filter(document_type="GST").order_by("-created_at").first()
+        fin = DocumentAnalysis.objects.filter(document_type="FIN").order_by("-created_at").first()
+
+        # ==================================================
+        # 2️⃣ DATA AVAILABILITY SCORE (20)
+        # ==================================================
+        availability_score = 0
+        if bank: availability_score += 7
+        if gst: availability_score += 7
+        if fin: availability_score += 6
+
+        # ==================================================
+        # 3️⃣ FINANCIAL STRENGTH SCORE (40)
+        # ==================================================
+        financial_score = 0
 
         if bank:
-            if bank.net_cash_flow < 0:
-                score -= 30
-            if bank.expense_ratio and bank.expense_ratio > 0.8:
-                score -= 20
-            if bank.cashflow_volatile:
-                score -= 10
+            if bank.net_cash_flow and bank.net_cash_flow > 0:
+                financial_score += 15
+            if bank.expense_ratio and bank.expense_ratio < 0.7:
+                financial_score += 10
+            if not bank.cashflow_volatile:
+                financial_score += 5
 
-        if gst and gst.compliance_gap and gst.compliance_gap > 0:
-            score -= 20
+        if fin:
+            if fin.current_ratio and fin.current_ratio > 1.5:
+                financial_score += 5
+            if fin.total_assets and fin.total_liabilities and fin.total_assets > fin.total_liabilities:
+                financial_score += 5
+            if fin.savings_ratio and fin.savings_ratio > 0.2:
+                financial_score += 5
 
-        score = max(score, 0)
+        # ==================================================
+        # 4️⃣ COMPLIANCE SCORE (20)
+        # ==================================================
+        compliance_score = 0
+        if gst:
+            if gst.compliance_gap == 0:
+                compliance_score = 20
+            elif gst.compliance_gap < 50000:
+                compliance_score = 10
 
-        if score >= 70:
+        # ==================================================
+        # 5️⃣ ML SCORE (20)
+        # ==================================================
+        ml_score = 0
+        ml_confidence = 0.0
+        ml_risk = "LOW"
+
+        try:
+            if bank:
+                model = load_model()
+                raw = predict_creditworthiness(model, bank)
+                ml_confidence = float(raw.get("confidence", 0))
+                ml_risk = raw.get("ml_risk_level", "LOW")
+
+                if ml_risk == "LOW":
+                    ml_score = 20
+                elif ml_risk == "MODERATE":
+                    ml_score = 12
+                else:
+                    ml_score = 5
+
+                ml_score *= ml_confidence
+        except:
+            pass
+
+        # ==================================================
+        # 6️⃣ FINAL SCORE
+        # ==================================================
+        score = int(availability_score + financial_score + compliance_score + ml_score)
+        score = max(0, min(100, score))
+
+        if score >= 75:
             risk_level = RiskLevel.LOW
-        elif score >= 40:
+        elif score >= 45:
             risk_level = RiskLevel.MODERATE
         else:
             risk_level = RiskLevel.HIGH
 
-        # --------------------------------------------------
-        # 3. ML assessment (SAFE)
-        # --------------------------------------------------
-        try:
-            if bank:
-                model = load_model()
-                raw_ml = predict_creditworthiness(model, bank)
-                ml_result = {
-                    "confidence": float(raw_ml.get("confidence", 0.0)),
-                    "key_features": raw_ml.get("key_features", []),
-                    "model_version": raw_ml.get("model_version", "v1.0"),
-                }
-            else:
-                raise ValueError("No bank data")
-        except Exception:
-            ml_result = {
-                "confidence": 0.0,
-                "key_features": [],
-                "model_version": "v1.0",
-            }
-
-        # --------------------------------------------------
-        # 4. Health breakdown (pillar logic)
-        # --------------------------------------------------
+        # ==================================================
+        # 7️⃣ BREAKDOWN
+        # ==================================================
         breakdown = {
-            "liquidity": {
-                "score": 35 if bank and bank.net_cash_flow < 0 else 70,
-                "status": "WEAK" if bank and bank.net_cash_flow < 0 else "STABLE",
-                "drivers": [
-                    "Negative net cash flow"
-                ] if bank and bank.net_cash_flow < 0 else [],
-            },
-            "profitability": {
-                "score": 50 if bank and bank.expense_ratio and bank.expense_ratio > 0.7 else 75,
-                "status": "MODERATE" if bank and bank.expense_ratio and bank.expense_ratio > 0.7 else "STRONG",
-                "drivers": [
-                    "High operating expenses"
-                ] if bank and bank.expense_ratio and bank.expense_ratio > 0.7 else [],
-            },
-            "compliance": {
-                "score": 80 if gst and gst.compliance_gap == 0 else 50,
-                "status": "STRONG" if gst and gst.compliance_gap == 0 else "MODERATE",
-                "drivers": [] if gst and gst.compliance_gap == 0 else ["GST compliance gaps"],
-            },
-            "cashflow": {
-                "score": 40 if bank and bank.cashflow_volatile else 70,
-                "status": "WEAK" if bank and bank.cashflow_volatile else "STABLE",
-                "drivers": ["Cash flow volatility"] if bank and bank.cashflow_volatile else [],
-            },
+            "liquidity": {"score": 70 if bank else 40, "status": "STABLE", "drivers": []},
+            "profitability": {"score": 75 if fin else 45, "status": "STRONG", "drivers": []},
+            "compliance": {"score": 80 if gst else 30, "status": "STRONG", "drivers": []},
+            "cashflow": {"score": 70 if bank else 40, "status": "STABLE", "drivers": []},
         }
 
-        # --------------------------------------------------
-        # 5. Risk factors
-        # --------------------------------------------------
-        risks = []
-
-        if bank and bank.net_cash_flow < 0:
-            risks.append({
-                "type": "CASHFLOW_RISK",
-                "severity": RiskLevel.HIGH,
-                "confidence": 0.92,
-                "evidence": [
-                    "Sustained negative cash flow detected"
-                ],
-            })
-
-        if bank and bank.expense_ratio and bank.expense_ratio > 0.8:
-            risks.append({
-                "type": "COST_STRUCTURE_RISK",
-                "severity": RiskLevel.MODERATE,
-                "confidence": 0.68,
-                "evidence": [
-                    "High expense ratio compared to revenue"
-                ],
-            })
-
-        # --------------------------------------------------
-        # 6. Trend signals
-        # --------------------------------------------------
-        trends = {
-            "cashflow": "DECLINING" if bank and bank.net_cash_flow < 0 else "STABLE",
-            "revenue": "VOLATILE" if bank and bank.cashflow_volatile else "STABLE",
-            "expense": "INCREASING" if bank and bank.expense_ratio and bank.expense_ratio > 0.7 else "STABLE",
-        }
-
-        # --------------------------------------------------
-        # 7. Impact simulation
-        # --------------------------------------------------
-        impact_actions = [
-            {
-                "action": "Reduce operating expenses by 10%",
-                "timeframe": "60 days",
-                "expected_outcome": "Improves liquidity and cash reserves",
-            },
-            {
-                "action": "Accelerate receivable collection",
-                "timeframe": "30 days",
-                "expected_outcome": "Stabilizes monthly cash flow",
-            },
-        ]
-
-        # --------------------------------------------------
-        # 8. Build Analysis DTO
-        # --------------------------------------------------
+        # ==================================================
+        # 8️⃣ BUILD DTO
+        # ==================================================
         analysis_dto = build_analysis_dto(
             score=score,
             risk_level=risk_level,
-            ml_result=ml_result,
+            ml_result={
+                "confidence": ml_confidence,
+                "key_features": [],
+                "model_version": "v1.0",
+            },
             breakdown=breakdown,
-            risks=risks,
-            trends=trends,
-            impact_actions=impact_actions,
+            risks=[],
+            trends={},
+            impact_actions=[
+                {
+                    "action": "Reduce operating expenses by 10%",
+                    "timeframe": "60 days",
+                    "expected_outcome": "Improves liquidity and cash reserves",
+                }
+            ],
         )
 
-        # --------------------------------------------------
-        # 9. Response (FROZEN)
-        # --------------------------------------------------
-        return Response(
-            {
-                "request_id": str(uuid.uuid4()),
-                "status": "SUCCESS",
-                "data": analysis_dto.model_dump(),
-                "warnings": [],
-                "errors": [],
-            },
-            status=200,
-        )
+        return Response({
+            "request_id": str(uuid.uuid4()),
+            "status": "SUCCESS",
+            "data": analysis_dto,
+            "warnings": [],
+            "errors": [],
+        })

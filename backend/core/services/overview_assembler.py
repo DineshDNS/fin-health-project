@@ -108,7 +108,7 @@ def build_overview_dto(
     key_concerns = overview_logic.get("key_concerns", [])
     recommendations = overview_logic.get("recommendations", [])
 
-    top_risk = None
+    # ---------- TOP RISK (SAFE FALLBACK) ----------
     if key_concerns:
         kr = key_concerns[0]
         kr_severity = RiskLevel(kr["severity"])
@@ -125,8 +125,19 @@ def build_overview_dto(
                 severity=_risk_to_ui(kr_severity),
             ),
         )
+    else:
+        top_risk = TopRiskInsightDTO(
+            title="No Major Risk Detected",
+            severity=RiskLevel.LOW,
+            summary="No critical financial risks identified at this time.",
+            why_it_matters="Upload more financial documents to enable deeper risk analysis.",
+            ui=KeyInsightUIDTO(
+                badge="Low Risk",
+                severity=SeverityLevel.info,
+            ),
+        )
 
-    recommended_action = None
+    # ---------- RECOMMENDED ACTION (SAFE FALLBACK) ----------
     if recommendations:
         rec = recommendations[0]
         priority = PriorityLevel(rec["priority"])
@@ -138,6 +149,17 @@ def build_overview_dto(
             ui=KeyInsightUIDTO(
                 badge=f"{priority.value} Priority",
                 severity=_priority_to_ui(priority),
+            ),
+        )
+    else:
+        recommended_action = RecommendedActionInsightDTO(
+            title="No Immediate Action Required",
+            priority=PriorityLevel.LOW,
+            summary="System currently detects no urgent financial corrections needed.",
+            expected_impact="Stable financial position maintained.",
+            ui=KeyInsightUIDTO(
+                badge="Low Priority",
+                severity=SeverityLevel.info,
             ),
         )
 

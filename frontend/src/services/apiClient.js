@@ -1,35 +1,29 @@
-// src/services/apiClient.js
+import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8000"; // Django backend
+/*
+  Central API client (FINAL)
+  -------------------------
+  - Supports JSON requests
+  - Supports FormData uploads
+  - Automatically sets correct Content-Type
+*/
 
-export async function apiClient(endpoint, options = {}) {
+const api = axios.create({
+  baseURL: "http://127.0.0.1:8000/api",
+  withCredentials: false,
+});
+
+// Attach JWT token if present
+api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
-
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  };
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (response.status === 401) {
-    // Token expired or invalid
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-
-    // Optional: redirect to login
-    window.location.href = "/login";
-    throw new Error("Unauthorized");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "API Error");
-  }
+  // IMPORTANT:
+  // Do NOT set Content-Type here
+  // Axios will set it automatically based on payload
+  return config;
+});
 
-  return response.json();
-}
+export default api;

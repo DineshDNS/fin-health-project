@@ -1,9 +1,10 @@
 from django.db import models
 
+
 class DocumentAnalysis(models.Model):
     # ---------------- COMMON ----------------
     document = models.ForeignKey(
-        "documents.Document",
+        "api.Document",   # ← FIXED HERE
         on_delete=models.CASCADE,
         related_name="analyses"
     )

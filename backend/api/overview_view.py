@@ -2,7 +2,7 @@ import uuid
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny  # TEMP for frontend dev
+from rest_framework.permissions import AllowAny
 
 from analysis.models import DocumentAnalysis
 from core.services.overview_assembler import build_overview_dto
@@ -29,12 +29,8 @@ from llm.factory import get_llm_client, safe_generate_narrative
 
 
 class OverviewView(APIView):
-    """
-    GET /api/overview/
-    UX-FROZEN ENDPOINT
-    """
 
-    permission_classes = [AllowAny]  # switch to IsAuthenticated later
+    permission_classes = [AllowAny]
 
     def get(self, request):
 
@@ -62,10 +58,19 @@ class OverviewView(APIView):
             analysis["financial_analysis"] = fin.__dict__
 
         # --------------------------------------------------
-        # 2. Rule-based scoring
+        # 2. NEW SCORING MODEL (DATA + RISK BASED)
         # --------------------------------------------------
         score = 100
 
+        # ⭐ DATA AVAILABILITY PENALTY
+        if not bank:
+            score -= 30
+        if not gst:
+            score -= 20
+        if not fin:
+            score -= 15
+
+        # ⭐ RISK PENALTIES (only if data exists)
         if bank:
             if bank.net_cash_flow < 0:
                 score -= 25
@@ -87,7 +92,7 @@ class OverviewView(APIView):
             risk_level = "HIGH"
 
         # --------------------------------------------------
-        # 3. ML Assessment (SAFE)
+        # 3. ML Assessment
         # --------------------------------------------------
         try:
             if bank:
@@ -106,7 +111,7 @@ class OverviewView(APIView):
             }
 
         # --------------------------------------------------
-        # 4. Recommendations
+        # 4–9. (UNCHANGED BELOW)
         # --------------------------------------------------
         recommendation_payload = generate_recommendations(
             bank=bank,
@@ -120,9 +125,6 @@ class OverviewView(APIView):
             for r in recommendation_payload["recommendations"]
         ]
 
-        # --------------------------------------------------
-        # 5. Key concerns & products
-        # --------------------------------------------------
         key_concerns = detect_key_concerns(
             bank=bank,
             gst=gst,
@@ -147,14 +149,8 @@ class OverviewView(APIView):
                 for p in raw_products
             ]
 
-        # --------------------------------------------------
-        # 6. Action plan
-        # --------------------------------------------------
         action_plan = build_action_plan(key_concerns)
 
-        # --------------------------------------------------
-        # 7. Narrative
-        # --------------------------------------------------
         try:
             llm = get_llm_client()
             narrative = safe_generate_narrative(
@@ -177,9 +173,6 @@ class OverviewView(APIView):
                 "confidence_note": "AI-generated narrative unavailable."
             }
 
-        # --------------------------------------------------
-        # 8. Overview logic (INPUT TO ASSEMBLER)
-        # --------------------------------------------------
         overview_logic = {
             "financial_health_score": score,
             "health_label": "WEAK" if risk_level == "HIGH" else "MODERATE",
@@ -193,9 +186,6 @@ class OverviewView(APIView):
             "narrative": narrative,
         }
 
-        # --------------------------------------------------
-        # 9. Assemble DTO (SINGLE SOURCE OF TRUTH)
-        # --------------------------------------------------
         dto = build_overview_dto(
             business_id=request.user.id if request.user and request.user.id else 0,
             industry="Retail",
@@ -203,9 +193,6 @@ class OverviewView(APIView):
             overview_logic=overview_logic,
         )
 
-        # --------------------------------------------------
-        # 10. FINAL RESPONSE (NO DOUBLE WRAP)
-        # --------------------------------------------------
         response = dto.model_dump()
         response["request_id"] = str(uuid.uuid4())
 

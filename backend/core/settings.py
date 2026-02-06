@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     'corsheaders',
 
     # Local apps
-    'documents',
     'aggregation',
     'scoring',
     'api',
@@ -53,13 +52,15 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
 
-    # CORS (must be high)
+    # CORS MUST be high
     'corsheaders.middleware.CorsMiddleware',
 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
 
+    # Keep CSRF enabled (safe default)
     'django.middleware.csrf.CsrfViewMiddleware',
+
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -129,25 +130,29 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --------------------------------------------------
-# DRF
+# DRF (SINGLE BLOCK — CLEAN)
 # --------------------------------------------------
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
     ],
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
 }
 
 # --------------------------------------------------
-# CORS (DEV MODE – CLEAN & SAFE)
+# CORS (DEV MODE)
 # --------------------------------------------------
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # --------------------------------------------------
-# CSRF (Vite / React)
+# CSRF + FRONTEND TRUST
 # --------------------------------------------------
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -155,10 +160,3 @@ CSRF_COOKIE_SAMESITE = "Lax"
 
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
-
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
-}
