@@ -1,0 +1,16 @@
+pipeline{
+  agent any
+    stages{
+        stage{
+            steps{
+                echo "github connected successfully"
+      }
+
+        stage{
+          step{
+              echo " buildin fin-helth-project"
+        }
+      }
+    }
+  }
+}
