@@ -1,16 +1,17 @@
-pipeline{
-  agent any
-    stages{
-        stage{
-            steps{
-                echo "github connected successfully"
-      }
+pipeline {
+    agent any
 
-        stage{
-          step{
-              echo " buildin fin-helth-project"
+    stages {
+        stage('Clone Check') {
+            steps {
+                echo 'GitHub connected successfully'
+            }
         }
-      }
+
+        stage('Project Info') {
+            steps {
+                echo 'Building fin-health-project'
+            }
+        }
     }
-  }
 }
